@@ -1,0 +1,63 @@
+{
+  "name": "you-md",
+  "version": "0.1.0",
+  "description": "Parser library and CLI for you.md personal AI context files",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "you-md": "./bin/you-md.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "keywords": [
+    "you.md",
+    "youmd",
+    "markdown",
+    "yaml",
+    "frontmatter",
+    "ai",
+    "context",
+    "parser",
+    "cli",
+    "preferences"
+  ],
+  "author": "sparker",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/briansparker/You.git"
+  },
+  "bugs": {
+    "url": "https://github.com/briansparker/You/issues"
+  },
+  "homepage": "https://github.com/briansparker/You#readme",
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@vitest/coverage-v8": "^2.1.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
