@@ -12,6 +12,43 @@ npm install you-md
 
 ## Quick Start
 
+### MCP Server (Recommended for Claude Code)
+
+Add to your Claude Code MCP settings (`~/.claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "you-md": {
+      "command": "npx",
+      "args": ["-y", "-p", "you-md", "you-md-mcp"]
+    }
+  }
+}
+```
+
+Or install globally first (`npm install -g you-md`), then:
+
+```json
+{
+  "mcpServers": {
+    "you-md": {
+      "command": "you-md-mcp"
+    }
+  }
+}
+```
+
+Then create your preferences file:
+
+```bash
+npx you-md init ~/.you.md
+```
+
+The MCP server provides:
+- **Resources:** Access your preferences via `youmd://preferences`
+- **Tools:** `youmd_init`, `youmd_validate`, `youmd_get_preferences`
+
 ### CLI Usage
 
 ```bash
@@ -275,10 +312,36 @@ interface YouMdSection {
 }
 ```
 
+## MCP Server
+
+The MCP server automatically loads your you.md preferences into Claude's context.
+
+### Setup
+
+1. Install: `npm install -g you-md`
+2. Add to Claude Code config (see Quick Start above)
+3. Create your profile: `you-md init ~/.you.md`
+4. Restart Claude Code
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `youmd_get_preferences` | Get your merged preferences |
+| `youmd_init` | Create a new you.md file |
+| `youmd_validate` | Validate a you.md file |
+
+### Available Resources
+
+| URI | Description |
+|-----|-------------|
+| `youmd://preferences` | Your merged preferences (project + global) |
+| `youmd://project` | Project-level .you.md |
+| `youmd://global` | Global ~/.you.md |
+
 ## Requirements
 
 - Node.js >= 18.0.0
-- Zero runtime dependencies
 
 ## License
 
