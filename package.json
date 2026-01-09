@@ -1,6 +1,6 @@
 {
   "name": "you-md",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Parser library and CLI for you.md personal AI context files",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
