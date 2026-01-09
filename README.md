@@ -312,6 +312,112 @@ interface YouMdSection {
 }
 ```
 
+## Personalization Signals
+
+The library supports extended personalization profiles for search and AI systems. These provide a machine-readable, human-inspectable control surface for AI agents and ranking systems.
+
+### Signal Categories
+
+| Category | Description |
+|----------|-------------|
+| Identity | Authentication state, trust scores, account age |
+| Location | Geographic context, timezone, regulatory region |
+| Language | Primary/secondary languages, reading level |
+| Device | Device type, OS, screen size, connection |
+| Search Behavior | Topics, search depth, reformulation patterns |
+| Content | Source preferences, expertise level, format bias |
+| AI Preferences | Verbosity, explanation depth, response format |
+| Trust & Safety | Misinformation sensitivity, content warnings |
+| Meta | Confidence scores, decay rates, experiments |
+
+### Creating a Personalization Profile
+
+```bash
+you-md init --format personalization ~/.personalization.md
+```
+
+### Extracting Signals
+
+```typescript
+import { createParser, extractAllSignals, hasPersonalizationSignals } from "you-md";
+
+const parser = createParser();
+const result = await parser.loadFromPath("./personalization.md");
+
+if (hasPersonalizationSignals(result.profile)) {
+  const signals = extractAllSignals(result.profile);
+
+  console.log(signals.identity?.trust_score);      // 0.92
+  console.log(signals.ai_preferences?.verbosity);  // "concise"
+  console.log(signals.content?.expertise_level);   // "expert"
+}
+```
+
+### Individual Signal Extraction
+
+```typescript
+import {
+  extractIdentitySignals,
+  extractLocationSignals,
+  extractSearchBehaviorSignals,
+  extractAIPreferences,
+  getSignalCategories,
+} from "you-md";
+
+// Extract specific signal categories
+const identity = extractIdentitySignals(profile);
+const location = extractLocationSignals(profile);
+const search = extractSearchBehaviorSignals(profile);
+const ai = extractAIPreferences(profile);
+
+// Check which categories are present
+const categories = getSignalCategories(profile);
+// ["identity", "location", "language", "device", "search_behavior", ...]
+```
+
+### Personalization Profile Format
+
+```markdown
+---
+schema_version: "1.0"
+profile_type: "personalization"
+created: "2025-01-09"
+---
+
+# Personalization Profile
+
+## Identity
+
+logged_in: true
+trust_score: 0.92
+verified_level: email
+age_range: 25-34
+
+## Location
+
+current_country: US
+timezone: America/Los_Angeles
+regulatory_region: CCPA
+
+## Search Behavior
+
+recent_topics: ["distributed systems", "kubernetes"]
+search_depth: deep
+expertise_level: expert
+
+## AI Response Preferences
+
+verbosity: concise
+explanation_depth: technical
+include_examples: true
+code_comments: sparse
+
+## Trust and Safety
+
+misinformation_sensitivity: high
+source_reliability_threshold: 0.8
+```
+
 ## MCP Server
 
 The MCP server automatically loads your you.md preferences into Claude's context.

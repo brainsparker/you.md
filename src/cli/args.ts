@@ -148,18 +148,20 @@ Options:
   -h, --help               Show help
   -v, --version            Show version
   -o, --output <path>      Output file path
-  -f, --format <format>    Output format (markdown, json)
+  -f, --format <format>    Template format: default, minimal, personalization
   -q, --quiet              Suppress output
   --verbose                Verbose output
   --force                  Force overwrite existing files
   --json                   Output as JSON
 
 Examples:
-  you-md init                     Create .you.md in current directory
-  you-md init ~/.you.md           Create global you.md
-  you-md validate ./you.md        Validate a file
-  you-md merge ~/.you.md ./.you.md  Merge user and project profiles
-  you-md convert .cursorrules     Convert .cursorrules to you.md
+  you-md init                              Create .you.md in current directory
+  you-md init ~/.you.md                    Create global you.md
+  you-md init -f personalization prefs.md  Create personalization profile
+  you-md init -f minimal .you.md           Create minimal profile
+  you-md validate ./you.md                 Validate a file
+  you-md merge ~/.you.md ./.you.md         Merge user and project profiles
+  you-md convert .cursorrules              Convert .cursorrules to you.md
 
 Documentation: https://github.com/briansparker/You
 `.trim();

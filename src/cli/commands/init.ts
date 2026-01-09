@@ -4,7 +4,11 @@ import { resolve, dirname } from "node:path";
 import { mkdir } from "node:fs/promises";
 
 import type { CliFlags } from "../args";
-import { getDefaultTemplate, getMinimalTemplate } from "../templates/default";
+import {
+  getDefaultTemplate,
+  getMinimalTemplate,
+  getPersonalizationTemplate,
+} from "../templates/default";
 
 /**
  * Initialize a new you.md file
@@ -29,9 +33,18 @@ export async function initCommand(
     return 1;
   }
 
-  // Get template content
-  const template =
-    flags.format === "minimal" ? getMinimalTemplate() : getDefaultTemplate();
+  // Get template content based on format
+  let template: string;
+  switch (flags.format) {
+    case "minimal":
+      template = getMinimalTemplate();
+      break;
+    case "personalization":
+      template = getPersonalizationTemplate();
+      break;
+    default:
+      template = getDefaultTemplate();
+  }
 
   try {
     // Ensure directory exists

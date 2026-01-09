@@ -24,6 +24,17 @@ export type {
   CommunicationPreferences,
   CodeGenerationPreferences,
   CodeReviewPreferences,
+  // Personalization signal types
+  IdentitySignals,
+  LocationSignals,
+  LanguageSignals,
+  DeviceSignals,
+  SearchBehaviorSignals,
+  ContentPreferences,
+  AIResponsePreferences,
+  TrustSafetySignals,
+  PersonalizationMeta,
+  PersonalizationProfile,
 } from "./types/preferences";
 
 // Options
@@ -44,6 +55,22 @@ export type { ParseResult, ParseError, ParseWarning } from "./types/parser";
 export { discoverProfilePath, getDefaultSearchPaths } from "./core/discovery";
 export { mergeProfiles } from "./core/merger";
 export { validateProfile, isValidProfile } from "./core/validator";
+
+// Personalization signal extraction
+export {
+  extractIdentitySignals,
+  extractLocationSignals,
+  extractLanguageSignals,
+  extractDeviceSignals,
+  extractSearchBehaviorSignals,
+  extractContentPreferences,
+  extractAIPreferences,
+  extractTrustSafetySignals,
+  extractPersonalizationMeta,
+  extractAllSignals,
+  hasPersonalizationSignals,
+  getSignalCategories,
+} from "./core/signals";
 
 // Low-level parsers (for advanced use)
 export { extractFrontmatter } from "./parser/frontmatter";

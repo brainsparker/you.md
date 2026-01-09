@@ -57,6 +57,7 @@ export const SENSITIVE_PATTERNS = [
  * Known section names for validation
  */
 export const KNOWN_SECTIONS = [
+  // Original you.md sections
   "about me",
   "about",
   "technical preferences",
@@ -75,6 +76,27 @@ export const KNOWN_SECTIONS = [
   "project profile",
   "testing",
   "documentation",
+  // Personalization signal sections
+  "personalization profile",
+  "identity",
+  "identity signals",
+  "location",
+  "location context",
+  "language",
+  "language preferences",
+  "device",
+  "device context",
+  "search behavior",
+  "search signals",
+  "content preferences",
+  "content",
+  "ai preferences",
+  "ai response preferences",
+  "trust and safety",
+  "trust safety",
+  "trust signals",
+  "personalization meta",
+  "meta",
 ];
 
 /**
