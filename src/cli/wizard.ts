@@ -6,18 +6,12 @@ import prompts from "prompts";
 import { CURRENT_SCHEMA_VERSION } from "../utils/constants.js";
 
 export interface WizardAnswers {
-  name?: string;
   expertise: string;
-  learningStyle: string;
   verbosity: string;
   tone: string;
   explanations: string;
   topics: string[];
   sourceQuality: string;
-  factChecking: string;
-  contentDepth: string;
-  language: string;
-  timezone?: string;
   donts: string[];
 }
 
@@ -25,143 +19,86 @@ export interface WizardAnswers {
  * Run the interactive wizard to gather user preferences
  */
 export async function runWizard(): Promise<WizardAnswers | null> {
-  console.log("\n🎯 Let's create your AI identity.\n");
+  console.log("\n✨ Let's set up your AI identity.\n");
 
   const answers = await prompts(
     [
       {
-        type: "text",
-        name: "name",
-        message: "What should AI call you? (optional)",
-        initial: "",
-      },
-      {
         type: "select",
         name: "expertise",
-        message: "What's your general expertise level?",
+        message: "How much should AI assume you know?",
         choices: [
-          { title: "Beginner", description: "New to most topics", value: "beginner" },
-          { title: "Intermediate", description: "Comfortable with fundamentals", value: "intermediate" },
-          { title: "Advanced", description: "Deep knowledge in your areas", value: "advanced" },
-          { title: "Expert", description: "Professional-level expertise", value: "expert" },
+          { title: "Explain everything", description: "I'm learning, walk me through it", value: "beginner" },
+          { title: "Skip the basics", description: "I know fundamentals", value: "intermediate" },
+          { title: "Be technical", description: "No hand-holding needed", value: "advanced" },
+          { title: "Assume expertise", description: "Just the facts, I'll figure it out", value: "expert" },
         ],
         initial: 1,
       },
       {
         type: "select",
-        name: "learningStyle",
-        message: "How do you prefer to learn?",
-        choices: [
-          { title: "Hands-on", description: "Show me examples, let me try", value: "hands-on" },
-          { title: "Conceptual", description: "Explain the theory first", value: "conceptual" },
-          { title: "Visual", description: "Diagrams and illustrations", value: "visual" },
-          { title: "Reference", description: "Give me docs, I'll figure it out", value: "reference" },
-        ],
-        initial: 0,
-      },
-      {
-        type: "select",
         name: "verbosity",
-        message: "How verbose should AI responses be?",
+        message: "How long should responses be?",
         choices: [
-          { title: "Minimal", description: "Just the answer, nothing extra", value: "minimal" },
-          { title: "Concise", description: "Brief but complete", value: "concise" },
-          { title: "Detailed", description: "Full explanations", value: "detailed" },
-          { title: "Verbose", description: "Comprehensive with context", value: "verbose" },
+          { title: "Short", description: "Just the answer", value: "minimal" },
+          { title: "Brief", description: "Concise but complete", value: "concise" },
+          { title: "Thorough", description: "Full explanations", value: "detailed" },
         ],
         initial: 1,
       },
       {
         type: "select",
         name: "tone",
-        message: "What tone do you prefer?",
+        message: "What tone works best for you?",
         choices: [
           { title: "Direct", description: "Straight to the point", value: "direct" },
-          { title: "Friendly", description: "Warm and approachable", value: "friendly" },
-          { title: "Professional", description: "Formal and polished", value: "professional" },
-          { title: "Casual", description: "Relaxed and conversational", value: "casual" },
+          { title: "Friendly", description: "Warm and conversational", value: "friendly" },
+          { title: "Professional", description: "Polished and formal", value: "professional" },
         ],
         initial: 0,
       },
       {
         type: "select",
         name: "explanations",
-        message: "When should AI explain its reasoning?",
+        message: "Should AI explain its reasoning?",
         choices: [
-          { title: "Always", description: "Show your work", value: "always" },
-          { title: "Only when asked", description: "Keep it brief unless I ask", value: "only when asked" },
-          { title: "Never", description: "Just give me the answer", value: "never" },
+          { title: "Yes, always", description: "Show the thinking", value: "always" },
+          { title: "Only if I ask", description: "Keep it clean unless I want more", value: "only when asked" },
+          { title: "No", description: "Just give me answers", value: "never" },
         ],
         initial: 1,
       },
       {
         type: "list",
         name: "topics",
-        message: "What topics interest you? (comma-separated)",
+        message: "Topics you care about? (comma-separated, or skip)",
         initial: "",
         separator: ",",
       },
       {
         type: "select",
         name: "sourceQuality",
-        message: "How strict about information sources?",
+        message: "How picky are you about sources?",
         choices: [
-          { title: "Relaxed", description: "Any reasonable source", value: "any" },
-          { title: "Standard", description: "Prefer reputable sources", value: "standard" },
-          { title: "High", description: "Official docs and peer-reviewed", value: "high" },
-          { title: "Strict", description: "Only authoritative sources", value: "authoritative" },
-        ],
-        initial: 2,
-      },
-      {
-        type: "select",
-        name: "factChecking",
-        message: "How important is fact-checking to you?",
-        choices: [
-          { title: "Relaxed", description: "Trust AI judgment", value: "relaxed" },
-          { title: "Standard", description: "Flag uncertain claims", value: "standard" },
-          { title: "Strict", description: "Cite sources, verify claims", value: "strict" },
+          { title: "Not very", description: "Reasonable sources are fine", value: "any" },
+          { title: "Somewhat", description: "Prefer reputable sources", value: "standard" },
+          { title: "Very", description: "Official docs and peer-reviewed only", value: "high" },
         ],
         initial: 1,
       },
       {
-        type: "select",
-        name: "contentDepth",
-        message: "How deep should content go?",
-        choices: [
-          { title: "Quick answers", description: "Surface level, fast", value: "quick" },
-          { title: "Moderate", description: "Balanced depth", value: "moderate" },
-          { title: "Thorough", description: "Complete coverage", value: "thorough" },
-          { title: "Deep dive", description: "Comprehensive analysis", value: "deep" },
-        ],
-        initial: 2,
-      },
-      {
-        type: "text",
-        name: "language",
-        message: "What's your primary language?",
-        initial: "en-US",
-      },
-      {
-        type: "text",
-        name: "timezone",
-        message: "What's your timezone? (optional)",
-        initial: "",
-      },
-      {
         type: "multiselect",
         name: "donts",
-        message: "What should AI avoid? (space to select, enter to confirm)",
+        message: "Pet peeves? (space to select)",
         choices: [
           { title: "Over-explaining", value: "Over-explain things I already know" },
-          { title: "Excessive caveats", value: "Use excessive caveats or hedging" },
-          { title: "Hand-holding", value: "Assume I need hand-holding" },
-          { title: "Repeating info", value: "Repeat information I just provided" },
+          { title: "Too many caveats", value: "Use excessive caveats or hedging" },
           { title: "Unnecessary disclaimers", value: "Add unnecessary disclaimers" },
+          { title: "Repeating what I said", value: "Repeat information I just provided" },
           { title: "Being too formal", value: "Be overly formal or stiff" },
           { title: "Being too casual", value: "Be too casual or use slang" },
         ],
-        hint: "- Space to select. Enter to submit",
+        hint: "Space to select, Enter to continue",
       },
     ],
     {
@@ -194,53 +131,65 @@ export function generateFromAnswers(answers: WizardAnswers): string {
   // Build don'ts list
   const dontsStr = answers.donts.length > 0
     ? answers.donts.map(d => `- ${d}`).join("\n")
-    : "- Over-explain things I already know";
+    : "";
 
-  // Map source quality to human-friendly text
+  // Map expertise to human-friendly assumption text
+  const expertiseMap: Record<string, string> = {
+    beginner: "explain everything",
+    intermediate: "skip the basics",
+    advanced: "be technical",
+    expert: "assume expertise",
+  };
+
+  // Map source quality
   const sourceMap: Record<string, string> = {
     any: "any reasonable source",
     standard: "reputable sources",
-    high: "official documentation, peer-reviewed",
-    authoritative: "authoritative sources only",
+    high: "official docs, peer-reviewed",
   };
 
-  return `---
+  // Map verbosity
+  const verbosityMap: Record<string, string> = {
+    minimal: "short",
+    concise: "brief",
+    detailed: "thorough",
+  };
+
+  let content = `---
 schema_version: "${CURRENT_SCHEMA_VERSION}"
 created: "${today}"
-last_updated: "${today}"
 privacy_level: "private"
 ---
 
-# Me${answers.name ? `\n\n${answers.name}` : ""}
-
-## How I Think
-
-Expertise: ${answers.expertise}
-Learning style: ${answers.learningStyle}
-Depth preference: ${answers.contentDepth}
+# Me
 
 ## How I Communicate
 
-Verbosity: ${answers.verbosity}
+Assume I know: ${expertiseMap[answers.expertise] || answers.expertise}
+Response length: ${verbosityMap[answers.verbosity] || answers.verbosity}
 Tone: ${answers.tone}
 Explanations: ${answers.explanations}
 
 ## What I Trust
 
-Trusted sources: ${sourceMap[answers.sourceQuality] || answers.sourceQuality}
-Fact-checking: ${answers.factChecking}
+Sources: ${sourceMap[answers.sourceQuality] || answers.sourceQuality}
+`;
 
+  if (topicsStr) {
+    content += `
 ## What I'm Into
 
 Topics: ${topicsStr}
-Content depth: ${answers.contentDepth}
+`;
+  }
 
-## Context
-
-Language: ${answers.language}${answers.timezone ? `\nTimezone: ${answers.timezone}` : ""}
-
+  if (dontsStr) {
+    content += `
 ## Don't
 
 ${dontsStr}
 `;
+  }
+
+  return content;
 }
