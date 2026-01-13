@@ -3,14 +3,15 @@ import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { mkdir } from "node:fs/promises";
 
-import type { CliFlags } from "../args";
+import type { CliFlags } from "../args.js";
 import {
   getDefaultTemplate,
   getMinimalTemplate,
   getPersonalizationTemplate,
   getIdentityTemplate,
   getDeveloperTemplate,
-} from "../templates/default";
+} from "../templates/default.js";
+import { runWizard, generateFromAnswers } from "../wizard.js";
 
 /**
  * Initialize a new you.md file
@@ -35,25 +36,36 @@ export async function initCommand(
     return 1;
   }
 
-  // Get template content based on format
   let template: string;
-  switch (flags.format) {
-    case "identity":
-      template = getIdentityTemplate();
-      break;
-    case "developer":
-      template = getDeveloperTemplate();
-      break;
-    case "minimal":
-      template = getMinimalTemplate();
-      break;
-    case "personalization":
-    case "signals":
-      template = getPersonalizationTemplate();
-      break;
-    default:
-      // Default is identity template (v1.1)
-      template = getDefaultTemplate();
+
+  // Interactive wizard mode
+  if (flags.interactive) {
+    const answers = await runWizard();
+    if (!answers) {
+      // User cancelled
+      return 1;
+    }
+    template = generateFromAnswers(answers);
+  } else {
+    // Get template content based on format
+    switch (flags.format) {
+      case "identity":
+        template = getIdentityTemplate();
+        break;
+      case "developer":
+        template = getDeveloperTemplate();
+        break;
+      case "minimal":
+        template = getMinimalTemplate();
+        break;
+      case "personalization":
+      case "signals":
+        template = getPersonalizationTemplate();
+        break;
+      default:
+        // Default is identity template (v1.1)
+        template = getDefaultTemplate();
+    }
   }
 
   try {
@@ -67,11 +79,13 @@ export async function initCommand(
     await writeFile(outputPath, template, "utf-8");
 
     if (!flags.quiet) {
-      console.log(`Created: ${outputPath}`);
-      console.log("");
-      console.log("Next steps:");
-      console.log("  1. Edit the file to add your preferences");
-      console.log("  2. Run 'you-md validate " + outputPath + "' to check");
+      console.log(`\n✓ Created: ${outputPath}`);
+      if (!flags.interactive) {
+        console.log("");
+        console.log("Next steps:");
+        console.log("  1. Edit the file to add your preferences");
+        console.log("  2. Run 'you-md validate " + outputPath + "' to check");
+      }
     }
 
     return 0;

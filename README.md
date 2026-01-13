@@ -44,7 +44,9 @@ Or install globally first (`npm install -g you-md`), then:
 Then create your preferences file:
 
 ```bash
-npx you-md init ~/.you.md
+npx you-md init -i ~/.you.md   # Interactive wizard (recommended)
+# or
+npx you-md init ~/.you.md      # Template-based
 ```
 
 The MCP server provides:
@@ -54,6 +56,9 @@ The MCP server provides:
 ### CLI Usage
 
 ```bash
+# Easiest: Interactive wizard
+you-md init -i
+
 # Create a new you.md file
 you-md init
 
@@ -218,6 +223,7 @@ The parser discovers you.md files in this order (first found wins):
 Create a new you.md file with a template.
 
 ```bash
+you-md init -i                     # Interactive wizard (easiest!)
 you-md init                        # Creates ./.you.md (identity template)
 you-md init ~/.you.md              # Creates global profile
 you-md init --format identity      # Human-centric identity (default)
@@ -226,6 +232,8 @@ you-md init --format signals       # Full personalization signals
 you-md init --format minimal       # Quick start minimal template
 you-md init --force                # Overwrite existing
 ```
+
+The interactive wizard (`-i`) asks a few questions and generates your profile - no manual editing needed.
 
 ### `you-md validate <path>`
 

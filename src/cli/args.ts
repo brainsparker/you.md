@@ -52,6 +52,9 @@ export interface CliFlags {
 
   /** Use JSON output */
   json?: boolean;
+
+  /** Interactive wizard mode */
+  interactive?: boolean;
 }
 
 /**
@@ -71,6 +74,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     verbose: { type: "boolean" as const },
     force: { type: "boolean" as const },
     json: { type: "boolean" as const },
+    interactive: { type: "boolean" as const, short: "i" },
   };
 
   try {
@@ -106,6 +110,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         verbose: values.verbose,
         force: values.force,
         json: values.json,
+        interactive: values.interactive,
       },
     };
   } catch (error) {
@@ -149,17 +154,18 @@ Options:
   -v, --version            Show version
   -o, --output <path>      Output file path
   -f, --format <format>    Template format: identity (default), developer, minimal, signals
+  -i, --interactive        Interactive wizard mode
   -q, --quiet              Suppress output
   --verbose                Verbose output
   --force                  Force overwrite existing files
   --json                   Output as JSON
 
 Examples:
+  you-md init -i                           Interactive wizard (easiest!)
   you-md init                              Create .you.md (identity template)
   you-md init ~/.you.md                    Create global you.md
   you-md init -f developer .you.md         Create developer-focused profile
   you-md init -f signals prefs.md          Create full personalization signals
-  you-md init -f minimal .you.md           Create minimal profile
   you-md validate ./you.md                 Validate a file
   you-md merge ~/.you.md ./.you.md         Merge user and project profiles
   you-md convert .cursorrules              Convert .cursorrules to you.md
