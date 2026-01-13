@@ -6,99 +6,115 @@ import prompts from "prompts";
 import { CURRENT_SCHEMA_VERSION } from "../utils/constants.js";
 
 export interface WizardAnswers {
-  expertise: string;
-  verbosity: string;
-  tone: string;
-  explanations: string;
+  // Search behavior
   topics: string[];
-  sourceQuality: string;
-  donts: string[];
+  expertise: string;
+  searchDepth: string;
+  // Content preferences
+  preferredSources: string[];
+  freshnessVsAuthority: string;
+  visualPreference: string;
+  // Trust & safety
+  factChecking: string;
+  // AI response (bonus)
+  verbosity: string;
 }
 
 /**
  * Run the interactive wizard to gather user preferences
  */
 export async function runWizard(): Promise<WizardAnswers | null> {
-  console.log("\n✨ Let's set up your AI identity.\n");
+  console.log("\n✨ Let's personalize your AI & search experience.\n");
 
   const answers = await prompts(
     [
       {
+        type: "list",
+        name: "topics",
+        message: "What topics interest you? (comma-separated)",
+        initial: "",
+        separator: ",",
+      },
+      {
         type: "select",
         name: "expertise",
-        message: "How much should AI assume you know?",
+        message: "What level of content do you prefer?",
         choices: [
-          { title: "Explain everything", description: "I'm learning, walk me through it", value: "beginner" },
-          { title: "Skip the basics", description: "I know fundamentals", value: "intermediate" },
-          { title: "Be technical", description: "No hand-holding needed", value: "advanced" },
-          { title: "Assume expertise", description: "Just the facts, I'll figure it out", value: "expert" },
+          { title: "Beginner-friendly", description: "Explain concepts, include context", value: "beginner" },
+          { title: "Intermediate", description: "Assume I know the basics", value: "intermediate" },
+          { title: "Advanced", description: "Technical depth, skip fundamentals", value: "advanced" },
+          { title: "Expert", description: "Cutting-edge, research-level", value: "expert" },
+        ],
+        initial: 1,
+      },
+      {
+        type: "select",
+        name: "searchDepth",
+        message: "Quick answers or deep dives?",
+        choices: [
+          { title: "Quick answers", description: "Get to the point fast", value: "quick" },
+          { title: "Balanced", description: "Enough detail to understand", value: "moderate" },
+          { title: "Deep dives", description: "Comprehensive, thorough", value: "deep" },
+        ],
+        initial: 1,
+      },
+      {
+        type: "multiselect",
+        name: "preferredSources",
+        message: "What sources do you trust? (space to select)",
+        choices: [
+          { title: "Official documentation", value: "official_docs" },
+          { title: "Academic/research papers", value: "academic" },
+          { title: "Blog posts & tutorials", value: "blogs" },
+          { title: "Stack Overflow / forums", value: "forums" },
+          { title: "News articles", value: "news" },
+          { title: "Video content", value: "video" },
+        ],
+        hint: "Space to select, Enter to continue",
+      },
+      {
+        type: "select",
+        name: "freshnessVsAuthority",
+        message: "Recent content or established sources?",
+        choices: [
+          { title: "Latest", description: "Newest information, even if less proven", value: "fresh" },
+          { title: "Balanced", description: "Mix of new and established", value: "balanced" },
+          { title: "Established", description: "Authoritative, time-tested sources", value: "authoritative" },
+        ],
+        initial: 1,
+      },
+      {
+        type: "select",
+        name: "visualPreference",
+        message: "How much do you like visual content?",
+        choices: [
+          { title: "Text preferred", description: "Articles, docs, written content", value: "low" },
+          { title: "Some visuals", description: "Diagrams when helpful", value: "moderate" },
+          { title: "Visual learner", description: "Images, videos, infographics", value: "high" },
+        ],
+        initial: 0,
+      },
+      {
+        type: "select",
+        name: "factChecking",
+        message: "How strict on accuracy?",
+        choices: [
+          { title: "Relaxed", description: "Reasonable accuracy is fine", value: "relaxed" },
+          { title: "Standard", description: "Flag uncertain claims", value: "standard" },
+          { title: "Strict", description: "Cite sources, high accuracy bar", value: "strict" },
         ],
         initial: 1,
       },
       {
         type: "select",
         name: "verbosity",
-        message: "How long should responses be?",
+        message: "How should AI respond to you?",
         choices: [
-          { title: "Short", description: "Just the answer", value: "minimal" },
-          { title: "Brief", description: "Concise but complete", value: "concise" },
-          { title: "Thorough", description: "Full explanations", value: "detailed" },
-        ],
-        initial: 1,
-      },
-      {
-        type: "select",
-        name: "tone",
-        message: "What tone works best for you?",
-        choices: [
-          { title: "Direct", description: "Straight to the point", value: "direct" },
-          { title: "Friendly", description: "Warm and conversational", value: "friendly" },
-          { title: "Professional", description: "Polished and formal", value: "professional" },
+          { title: "Concise", description: "Brief, to the point", value: "concise" },
+          { title: "Balanced", description: "Clear with enough context", value: "moderate" },
+          { title: "Detailed", description: "Thorough explanations", value: "detailed" },
         ],
         initial: 0,
-      },
-      {
-        type: "select",
-        name: "explanations",
-        message: "Should AI explain its reasoning?",
-        choices: [
-          { title: "Yes, always", description: "Show the thinking", value: "always" },
-          { title: "Only if I ask", description: "Keep it clean unless I want more", value: "only when asked" },
-          { title: "No", description: "Just give me answers", value: "never" },
-        ],
-        initial: 1,
-      },
-      {
-        type: "list",
-        name: "topics",
-        message: "Topics you care about? (comma-separated, or skip)",
-        initial: "",
-        separator: ",",
-      },
-      {
-        type: "select",
-        name: "sourceQuality",
-        message: "How picky are you about sources?",
-        choices: [
-          { title: "Not very", description: "Reasonable sources are fine", value: "any" },
-          { title: "Somewhat", description: "Prefer reputable sources", value: "standard" },
-          { title: "Very", description: "Official docs and peer-reviewed only", value: "high" },
-        ],
-        initial: 1,
-      },
-      {
-        type: "multiselect",
-        name: "donts",
-        message: "Pet peeves? (space to select)",
-        choices: [
-          { title: "Over-explaining", value: "Over-explain things I already know" },
-          { title: "Too many caveats", value: "Use excessive caveats or hedging" },
-          { title: "Unnecessary disclaimers", value: "Add unnecessary disclaimers" },
-          { title: "Repeating what I said", value: "Repeat information I just provided" },
-          { title: "Being too formal", value: "Be overly formal or stiff" },
-          { title: "Being too casual", value: "Be too casual or use slang" },
-        ],
-        hint: "Space to select, Enter to continue",
       },
     ],
     {
@@ -123,39 +139,45 @@ export async function runWizard(): Promise<WizardAnswers | null> {
 export function generateFromAnswers(answers: WizardAnswers): string {
   const today = new Date().toISOString().split("T")[0];
 
-  // Build topics string
-  const topicsStr = answers.topics.length > 0
-    ? answers.topics.map(t => t.trim()).filter(Boolean).join(", ")
-    : "";
+  // Build topics list
+  const topics = answers.topics
+    .map(t => t.trim())
+    .filter(Boolean);
 
-  // Build don'ts list
-  const dontsStr = answers.donts.length > 0
-    ? answers.donts.map(d => `- ${d}`).join("\n")
-    : "";
-
-  // Map expertise to human-friendly assumption text
-  const expertiseMap: Record<string, string> = {
-    beginner: "explain everything",
-    intermediate: "skip the basics",
-    advanced: "be technical",
-    expert: "assume expertise",
+  // Map source values to readable names
+  const sourceLabels: Record<string, string> = {
+    official_docs: "official documentation",
+    academic: "academic papers",
+    blogs: "blog posts",
+    forums: "Stack Overflow, forums",
+    news: "news articles",
+    video: "video content",
   };
 
-  // Map source quality
-  const sourceMap: Record<string, string> = {
-    any: "any reasonable source",
-    standard: "reputable sources",
-    high: "official docs, peer-reviewed",
+  const sources = answers.preferredSources
+    .map(s => sourceLabels[s] || s)
+    .join(", ");
+
+  // Map numeric preferences
+  const depthMap: Record<string, number> = {
+    quick: 0.3,
+    moderate: 0.5,
+    deep: 0.8,
   };
 
-  // Map verbosity
-  const verbosityMap: Record<string, string> = {
-    minimal: "short",
-    concise: "brief",
-    detailed: "thorough",
+  const freshnessMap: Record<string, number> = {
+    fresh: 0.8,
+    balanced: 0.5,
+    authoritative: 0.2,
   };
 
-  let content = `---
+  const visualMap: Record<string, number> = {
+    low: 0.2,
+    moderate: 0.5,
+    high: 0.8,
+  };
+
+  return `---
 schema_version: "${CURRENT_SCHEMA_VERSION}"
 created: "${today}"
 privacy_level: "private"
@@ -163,33 +185,27 @@ privacy_level: "private"
 
 # Me
 
-## How I Communicate
+## Search Behavior
 
-Assume I know: ${expertiseMap[answers.expertise] || answers.expertise}
-Response length: ${verbosityMap[answers.verbosity] || answers.verbosity}
-Tone: ${answers.tone}
-Explanations: ${answers.explanations}
+topics: [${topics.map(t => `"${t}"`).join(", ")}]
+search_depth: ${answers.searchDepth}
+expertise_level: ${answers.expertise}
 
-## What I Trust
+## Content Preferences
 
-Sources: ${sourceMap[answers.sourceQuality] || answers.sourceQuality}
+preferred_sources: [${answers.preferredSources.map(s => `"${s}"`).join(", ")}]
+freshness_weight: ${freshnessMap[answers.freshnessVsAuthority] || 0.5}
+visual_preference: ${visualMap[answers.visualPreference] || 0.2}
+long_form_preference: ${depthMap[answers.searchDepth] || 0.5}
+
+## Trust and Safety
+
+misinformation_sensitivity: ${answers.factChecking === "strict" ? "high" : answers.factChecking}
+fact_check_preference: ${answers.factChecking === "strict" ? "inline" : "subtle"}
+
+## AI Response Preferences
+
+verbosity: ${answers.verbosity === "moderate" ? "concise" : answers.verbosity}
+explanation_depth: ${answers.expertise === "beginner" ? "detailed" : answers.expertise === "expert" ? "minimal" : "moderate"}
 `;
-
-  if (topicsStr) {
-    content += `
-## What I'm Into
-
-Topics: ${topicsStr}
-`;
-  }
-
-  if (dontsStr) {
-    content += `
-## Don't
-
-${dontsStr}
-`;
-  }
-
-  return content;
 }
