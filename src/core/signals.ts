@@ -18,16 +18,47 @@ import type {
 
 /**
  * Section name mappings for signal extraction
+ * Includes both technical names and human-friendly aliases (v1.1)
  */
 const SECTION_ALIASES: Record<string, string[]> = {
+  // Identity signals
   identity: ["identity", "identity signals"],
-  location: ["location", "location context"],
+  // Location/context signals (also maps from human-centric "context")
+  location: ["location", "location context", "context"],
+  // Language preferences
   language: ["language", "language preferences"],
+  // Device context
   device: ["device", "device context"],
-  search_behavior: ["search behavior", "search signals"],
-  content: ["content preferences", "content"],
-  ai_preferences: ["ai preferences", "ai response preferences"],
-  trust_safety: ["trust and safety", "trust safety", "trust signals"],
+  // Search behavior (also maps from "what i'm into")
+  search_behavior: [
+    "search behavior",
+    "search signals",
+    "what i'm into",
+    "what im into",
+  ],
+  // Content preferences (also maps from "what i trust" and "what i'm into")
+  content: [
+    "content preferences",
+    "content",
+    "what i trust",
+    "what i'm into",
+    "what im into",
+  ],
+  // AI response preferences (also maps from "how i communicate" and "how i think")
+  ai_preferences: [
+    "ai preferences",
+    "ai response preferences",
+    "how i communicate",
+    "how i think",
+  ],
+  // Trust and safety (also maps from "what i trust")
+  trust_safety: [
+    "trust and safety",
+    "trust safety",
+    "trust signals",
+    "what i trust",
+  ],
+  // Meta/profile metadata
   meta: ["personalization meta", "meta"],
 };
 

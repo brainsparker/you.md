@@ -1,8 +1,10 @@
 # you-md
 
-Parser library and CLI for you.md personal AI context files.
+Parser library and CLI for you.md - your portable AI identity.
 
-The you.md standard provides a portable way to define your preferences, coding style, and communication expectations for AI-assisted development tools.
+**Own your AI identity. Stop being a stranger.**
+
+The you.md standard provides a portable way to define who you are to AI systems. Create your profile once, use it everywhere - across search engines, AI assistants, and any tool that supports the format.
 
 ## Installation
 
@@ -108,52 +110,95 @@ console.log(validation.valid, validation.errors, validation.warnings);
 
 ## you.md File Format
 
+### Identity Format (Default, v1.1)
+
+Human-centric format for everyone:
+
+```markdown
+---
+schema_version: "1.1"
+created: "2025-01-13"
+privacy_level: "private"
+---
+
+# Me
+
+## How I Think
+
+Expertise: expert
+Learning style: hands-on
+Decision making: data-driven
+Depth preference: thorough
+
+## How I Communicate
+
+Verbosity: concise
+Tone: direct
+Explanations: only when asked
+Examples: yes, when helpful
+
+## What I Trust
+
+Trusted sources: official documentation, peer-reviewed
+Fact-checking: strict
+Content warnings: standard
+Source quality: high
+
+## What I'm Into
+
+Topics: distributed systems, machine learning
+Content depth: long-form analysis
+Visual content: minimal
+
+## Context
+
+Language: en-US
+Timezone: America/Los_Angeles
+
+## Don't
+
+- Over-explain things I already know
+- Use excessive caveats or hedging
+- Assume I need hand-holding
+```
+
+### Developer Format
+
+For developers who want coding-specific preferences:
+
+```bash
+you-md init --format developer
+```
+
 ```markdown
 ---
 schema_version: "1.0"
-created: "2025-01-06"
-last_updated: "2025-01-06"
 privacy_level: "private"
-author: "Your Name"
-tags: ["coding", "typescript"]
 ---
 
 # you.md
-
-## About Me
-
-Senior developer focused on backend systems.
 
 ## Technical Preferences
 
 Primary Languages: TypeScript, Python
 Frameworks: FastAPI, React
 
-Style Preferences:
-- Use prettier for formatting
-- Prefer functional patterns
-- Strict TypeScript
-
 ## Communication Style
 
 Verbosity: concise
 Explanations: when_asked
-Assumptions: ask_first
 Code Comments: sparse
 
 ## Code Generation Preferences
 
-When generating code:
 - Include type annotations
 - Add error handling for I/O
-- Use async/await for I/O operations
 - Prefer dependency injection
 
 ## Don't
 
 - Add verbose explanations unless asked
 - Suggest obvious refactors
-- Skip error handling
 ```
 
 ## Discovery Order
@@ -173,10 +218,13 @@ The parser discovers you.md files in this order (first found wins):
 Create a new you.md file with a template.
 
 ```bash
-you-md init                    # Creates ./.you.md
-you-md init ~/.you.md          # Creates global profile
-you-md init --format minimal   # Creates minimal template
-you-md init --force            # Overwrite existing
+you-md init                        # Creates ./.you.md (identity template)
+you-md init ~/.you.md              # Creates global profile
+you-md init --format identity      # Human-centric identity (default)
+you-md init --format developer     # Developer-focused coding preferences
+you-md init --format signals       # Full personalization signals
+you-md init --format minimal       # Quick start minimal template
+you-md init --force                # Overwrite existing
 ```
 
 ### `you-md validate <path>`
@@ -333,7 +381,7 @@ The library supports extended personalization profiles for search and AI systems
 ### Creating a Personalization Profile
 
 ```bash
-you-md init --format personalization ~/.personalization.md
+you-md init --format signals ~/.personalization.md
 ```
 
 ### Extracting Signals

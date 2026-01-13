@@ -1,7 +1,77 @@
 /**
- * Default you.md template for the init command
+ * Human-centric identity template (v1.1 default)
+ * For general audience - focuses on AI identity, not coding
+ */
+export function getIdentityTemplate(): string {
+  const today = new Date().toISOString().split("T")[0];
+
+  return `---
+schema_version: "1.1"
+created: "${today}"
+last_updated: "${today}"
+privacy_level: "private"
+---
+
+# Me
+
+## How I Think
+
+<!-- Your expertise and cognitive style -->
+Expertise: intermediate
+Learning style: hands-on
+Decision making: data-driven
+Depth preference: thorough
+
+## How I Communicate
+
+<!-- How AI should talk to you -->
+Verbosity: concise
+Tone: direct
+Explanations: only when asked
+Examples: yes, when helpful
+
+## What I Trust
+
+<!-- Your standards for information quality -->
+Trusted sources: official documentation, peer-reviewed
+Fact-checking: strict
+Content warnings: standard
+Source quality: high
+
+## What I'm Into
+
+<!-- Topics and content you care about -->
+Topics:
+Content depth: long-form analysis
+Visual content: minimal
+
+## Context
+
+<!-- Your environment and accessibility needs -->
+Language: en-US
+Timezone:
+Accessibility:
+
+## Don't
+
+<!-- Things you want AI to avoid -->
+- Over-explain things I already know
+- Use excessive caveats or hedging
+- Assume I need hand-holding
+`;
+}
+
+/**
+ * Default template - returns identity template (v1.1)
  */
 export function getDefaultTemplate(): string {
+  return getIdentityTemplate();
+}
+
+/**
+ * Developer-focused template for coding preferences
+ */
+export function getDeveloperTemplate(): string {
   const today = new Date().toISOString().split("T")[0];
 
   return `---

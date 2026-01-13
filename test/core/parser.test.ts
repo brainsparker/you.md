@@ -134,7 +134,7 @@ author: "Test"
     it("handles empty array", () => {
       const merged = parser.merge([]);
 
-      expect(merged.schemaVersion).toBe("1.0");
+      expect(merged.schemaVersion).toBe("1.1");
       expect(merged.sections.size).toBe(0);
     });
 

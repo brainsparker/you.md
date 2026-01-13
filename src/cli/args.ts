@@ -148,16 +148,17 @@ Options:
   -h, --help               Show help
   -v, --version            Show version
   -o, --output <path>      Output file path
-  -f, --format <format>    Template format: default, minimal, personalization
+  -f, --format <format>    Template format: identity (default), developer, minimal, signals
   -q, --quiet              Suppress output
   --verbose                Verbose output
   --force                  Force overwrite existing files
   --json                   Output as JSON
 
 Examples:
-  you-md init                              Create .you.md in current directory
+  you-md init                              Create .you.md (identity template)
   you-md init ~/.you.md                    Create global you.md
-  you-md init -f personalization prefs.md  Create personalization profile
+  you-md init -f developer .you.md         Create developer-focused profile
+  you-md init -f signals prefs.md          Create full personalization signals
   you-md init -f minimal .you.md           Create minimal profile
   you-md validate ./you.md                 Validate a file
   you-md merge ~/.you.md ./.you.md         Merge user and project profiles

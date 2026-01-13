@@ -8,6 +8,8 @@ import {
   getDefaultTemplate,
   getMinimalTemplate,
   getPersonalizationTemplate,
+  getIdentityTemplate,
+  getDeveloperTemplate,
 } from "../templates/default";
 
 /**
@@ -36,13 +38,21 @@ export async function initCommand(
   // Get template content based on format
   let template: string;
   switch (flags.format) {
+    case "identity":
+      template = getIdentityTemplate();
+      break;
+    case "developer":
+      template = getDeveloperTemplate();
+      break;
     case "minimal":
       template = getMinimalTemplate();
       break;
     case "personalization":
+    case "signals":
       template = getPersonalizationTemplate();
       break;
     default:
+      // Default is identity template (v1.1)
       template = getDefaultTemplate();
   }
 

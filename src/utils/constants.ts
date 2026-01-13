@@ -26,12 +26,12 @@ export const DEFAULT_FILE_NAMES = [".you.md", "you.md"];
 /**
  * Supported schema versions
  */
-export const SUPPORTED_SCHEMA_VERSIONS = ["1.0"];
+export const SUPPORTED_SCHEMA_VERSIONS = ["1.0", "1.1"];
 
 /**
  * Current schema version
  */
-export const CURRENT_SCHEMA_VERSION = "1.0";
+export const CURRENT_SCHEMA_VERSION = "1.1";
 
 /**
  * Frontmatter delimiters
@@ -57,6 +57,14 @@ export const SENSITIVE_PATTERNS = [
  * Known section names for validation
  */
 export const KNOWN_SECTIONS = [
+  // Human-centric identity sections (v1.1)
+  "me",
+  "how i think",
+  "how i communicate",
+  "what i trust",
+  "what i'm into",
+  "what im into",
+  "context",
   // Original you.md sections
   "about me",
   "about",
