@@ -1,0 +1,59 @@
+# Beginner profile evaluation - tests personalization for beginner users
+# Injects you.md beginner profile as system context
+
+golden_set: ./golden_set.yaml
+
+models:
+  - name: "Claude Sonnet (Beginner Profile)"
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.7
+    max_tokens: 1024
+    additional_params:
+      system: |
+        You are a helpful assistant.
+
+        <user_profile>
+        The user has the following preferences:
+
+        Expertise Level: beginner
+        Preferred Depth: moderate
+        Preferred Sources: blogs, video, forums
+        Visual Preference: 0.7 (prefers visual explanations and examples)
+        Long-form Preference: 0.3 (prefers concise, digestible responses)
+
+        Please tailor your response to match this user's expertise level and preferences.
+        - Explain concepts in simple terms, avoid jargon
+        - Use analogies and real-world examples
+        - Keep responses focused and not overwhelming
+        - Suggest beginner-friendly resources
+        </user_profile>
+
+judge:
+  provider: anthropic
+  model: claude-sonnet-4-20250514
+  temperature: 0.3
+  criteria:
+    - "expertise_matching"
+    - "accessibility"
+    - "actionable_guidance"
+  custom_prompt: |
+    The response should be tailored for a BEGINNER user who prefers simple, concise explanations.
+
+    Evaluate the response based on these criteria:
+    - expertise_matching: Does the response use appropriate language for a beginner? Does it explain concepts simply and avoid unexplained jargon?
+    - accessibility: Is the response approachable? Does it use analogies? Does it avoid overwhelming the reader with too much information?
+    - actionable_guidance: Does the response provide clear next steps or resources appropriate for beginners?
+
+    Score each criterion from 0-10 and provide brief justification.
+
+execution:
+  parallel_requests: 2
+  timeout: 60
+  retries: 2
+
+output:
+  directory: ./results/beginner
+  formats:
+    - html
+    - json

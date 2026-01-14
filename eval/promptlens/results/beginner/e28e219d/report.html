@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unnamed Run - PromptLens Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #12171f;
+            --bg-tertiary: #1a2130;
+            --border: #2a3441;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-cyan: #00d9ff;
+            --accent-purple: #a371f7;
+            --accent-orange: #ff9500;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --score-1: #f85149;
+            --score-2: #ff9500;
+            --score-3: #ffd700;
+            --score-4: #79c0ff;
+            --score-5: #3fb950;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Background Effects */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(0, 217, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(163, 113, 247, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            padding: 3rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3rem;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 2rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+        }
+
+        .header-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-meta strong {
+            color: var(--accent-cyan);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-value.accent-cyan { color: var(--accent-cyan); }
+        .stat-value.accent-purple { color: var(--accent-purple); }
+        .stat-value.accent-orange { color: var(--accent-orange); }
+        .stat-value.accent-green { color: var(--accent-green); }
+
+        /* Section Headers */
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 3rem 0 1.5rem;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 2rem;
+            background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 2px;
+        }
+
+        /* Model Cards */
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .model-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            animation: fadeInUp 0.8s ease-out both;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:nth-child(1) { animation-delay: 0.1s; }
+        .model-card:nth-child(2) { animation-delay: 0.2s; }
+        .model-card:nth-child(3) { animation-delay: 0.3s; }
+        .model-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .model-card:hover {
+            border-color: var(--accent-purple);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(163, 113, 247, 0.1);
+        }
+
+        .model-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--accent-cyan);
+        }
+
+        .model-metrics {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .metric-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .score-5 { background: var(--score-5); color: var(--bg-primary); }
+        .score-4 { background: var(--score-4); color: var(--bg-primary); }
+        .score-3 { background: var(--score-3); color: var(--bg-primary); }
+        .score-2 { background: var(--score-2); color: var(--bg-primary); }
+        .score-1 { background: var(--score-1); color: var(--bg-primary); }
+
+        /* Charts */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Test Cases */
+        .test-cases {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .test-case {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .test-case:hover {
+            border-color: var(--border);
+        }
+
+        .test-case-header {
+            padding: 1.5rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .test-case-header:hover {
+            background: rgba(42, 52, 65, 0.5);
+        }
+
+        .test-case-id {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-purple);
+            font-size: 0.875rem;
+        }
+
+        .test-case-query {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .test-case-expected {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .test-case.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .test-case-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .test-case.expanded .test-case-body {
+            max-height: 5000px;
+        }
+
+        .model-results {
+            display: grid;
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        .model-result {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .model-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .model-result-name {
+            font-weight: 600;
+            color: var(--accent-cyan);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .model-result-stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .response-text {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent-purple);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .explanation {
+            background: rgba(0, 217, 255, 0.05);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .error-box {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--accent-red);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: var(--accent-red);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 5rem;
+            padding: 2rem 0 3rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-purple);
+        }
+
+        /* Utilities */
+        .mono {
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .header-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .stats-grid,
+            .models-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Unnamed Run</h1>
+            <div class="header-meta">
+                <span><strong>Run ID:</strong> e28e219d</span>
+                <span><strong>Timestamp:</strong> 2026-01-13 22:23:36 UTC</span>
+                <span><strong>Golden Set:</strong> you.md Personalization Evaluation</span>
+            </div>
+        </header>
+
+        <!-- Summary Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Cost</div>
+                <div class="stat-value accent-orange">$0.0000</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Time</div>
+                <div class="stat-value accent-cyan">25640ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Test Cases</div>
+                <div class="stat-value accent-purple">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Models Tested</div>
+                <div class="stat-value accent-green">1</div>
+            </div>
+        </div>
+
+        <!-- Model Results -->
+        <h2>Model Performance</h2>
+        <div class="models-grid">
+            
+            <div class="model-card">
+                <div class="model-name">claude-sonnet-4-20250514</div>
+                <div class="model-metrics">
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">Average Score</span>
+                        <span class="metric-value">
+                            
+                            <span class="score-badge score-3">
+                                3.00/5.0
+                            </span>
+                        </span>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">Total Cost</span>
+                        <span class="metric-value">$0.0000</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Time</span>
+                        <span class="metric-value">25640ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Evaluations</span>
+                        <span class="metric-value">2</span>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Charts -->
+        <h2>Score Distribution</h2>
+        <div class="charts-container">
+            
+            <div class="chart-card">
+                <div class="chart-title">claude-sonnet-4-20250514</div>
+                <canvas id="chart-1" width="400" height="300"></canvas>
+            </div>
+            
+        </div>
+
+        <!-- Test Cases -->
+        <h2>Detailed Results</h2>
+        <div class="test-cases">
+            
+            <div class="test-case" id="test-1">
+                <div class="test-case-header" onclick="toggleTestCase(1)">
+                    <div>
+                        <div class="test-case-id">k8s-networking</div>
+                        <div class="test-case-query">Explain how Kubernetes networking works</div>
+                        <div class="test-case-expected"><strong>Expected:</strong> Response should be tailored to the user&#39;s expertise level.
+For experts: Should include technical terms like CNI, kube-proxy, iptables, pod networking model.
+For beginners: Should use analogies, avoid jargon, explain concepts simply.
+Response depth should match the user&#39;s preference.
+</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="test-case-body">
+                    <div class="model-results">
+                        
+                        <div class="model-result">
+                            <div class="model-result-header">
+                                <span class="model-result-name">claude-sonnet-4-20250514</span>
+                                <div class="model-result-stats">
+                                    
+                                    <span class="score-badge score-3">Score: 3/5</span>
+                                    
+                                    <span>14209ms</span>
+                                    <span>$0.0000</span>
+                                </div>
+                            </div>
+
+                            
+                            <div class="response-text"># Kubernetes Networking Explained Simply
+
+Think of Kubernetes networking like a **smart postal system** for a large apartment complex (your cluster). Let me break this down into digestible pieces:
+
+## 🏢 The Big Picture
+
+Imagine you have multiple apartment buildings (nodes) with many apartments (pods) inside. Each apartment needs:
+- A unique address to receive mail
+- A way to talk to other apartments
+- Access to the outside world
+
+## 🔑 Key Components
+
+### **1. Pod Networking**
+- Each pod gets its own IP address (like an apartment number)
+- Pods can talk directly to each other using these IPs
+- Think of it as having a direct phone line between apartments
+
+### **2. Services - The Reception Desk**
+Services act like a hotel reception desk:
+- You ask for &#34;room service&#34; instead of memorizing specific room numbers
+- The desk routes your request to available staff
+- Even if staff changes, you still ask the same desk
+
+**Example**: Instead of remembering changing pod IPs, you use a service name like `my-web-app`
+
+### **3. Ingress - The Main Entrance**
+- This is like the main lobby entrance to your building
+- Routes external traffic (internet) to the right internal services
+- Handles things like SSL certificates and domain names
+
+## 🌐 How Traffic Flows
+
+```
+Internet → Ingress → Service → Pod
+   ↓         ↓        ↓       ↓
+Your User → Lobby → Reception → Apartment
+```
+
+## 📚 Great Resources to Learn More
+
+**Videos:**
+- &#34;Kubernetes Networking Explained&#34; by TechWorld with Nana (YouTube)
+- Kubernetes networking basics on KodeKloud
+
+**Beginner-friendly reads:**
+- Kubernetes.io official tutorials
+- &#34;Kubernetes for Beginners&#34; blog series on Medium
+
+**Hands-on practice:**
+- Try Minikube on your local machine
+- Play with Kubernetes (online playground)
+
+## 🎯 Quick Takeaway
+
+Start by understanding that Kubernetes networking is just about giving everything an address and creating smart routing systems. Don&#39;t worry about the complex details initially - focus on pods getting IPs, services providing stable endpoints, and ingress handling external access.
+
+Would you like me to dive deeper into any specific part, like how services actually route traffic?</div>
+
+                            
+                            <div class="explanation">
+                                <strong>Judge's Evaluation:</strong><br>
+                                [Score parsing failed, using default score of 3] Unable to parse explanation
+                            </div>
+                            
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-case" id="test-2">
+                <div class="test-case-header" onclick="toggleTestCase(2)">
+                    <div>
+                        <div class="test-case-id">debug-slow-query</div>
+                        <div class="test-case-query">How would you debug a slow database query?</div>
+                        <div class="test-case-expected"><strong>Expected:</strong> Response should match the user&#39;s technical level.
+For experts: Should mention EXPLAIN plans, query optimizer, index strategies, profiling tools.
+For beginners: Should provide step-by-step guidance, explain what indexes are, suggest simple tools.
+Response should be appropriately detailed based on preference.
+</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="test-case-body">
+                    <div class="model-results">
+                        
+                        <div class="model-result">
+                            <div class="model-result-header">
+                                <span class="model-result-name">claude-sonnet-4-20250514</span>
+                                <div class="model-result-stats">
+                                    
+                                    <span class="score-badge score-3">Score: 3/5</span>
+                                    
+                                    <span>11430ms</span>
+                                    <span>$0.0000</span>
+                                </div>
+                            </div>
+
+                            
+                            <div class="response-text"># Debugging Slow Database Queries: A Beginner&#39;s Guide
+
+Think of a slow database query like trying to find a specific book in a huge, disorganized library. Here&#39;s how to systematically figure out what&#39;s slowing things down:
+
+## 🔍 **Step 1: Identify the Problem**
+- **Use query profiling tools** - Most databases have built-in tools that show you which queries are taking the longest
+- **Check execution time** - Look for queries taking more than a few seconds
+
+## 📊 **Step 2: Analyze the Query Plan**
+This is like getting a map of how the database searches for your data:
+- Run `EXPLAIN` (MySQL/PostgreSQL) or similar commands
+- Look for &#34;table scans&#34; - these mean the database is checking every single row (like reading every book in the library!)
+
+## ⚡ **Step 3: Common Fixes**
+
+**Add Indexes** (Most Important!)
+- Think of indexes like a library&#39;s card catalog system
+- They help the database jump directly to the right data
+- Example: If you often search by customer name, create an index on the name column
+
+**Optimize WHERE Clauses**
+- Put the most selective conditions first
+- Avoid functions in WHERE clauses (they prevent index usage)
+
+**Limit Results**
+- Use `LIMIT` to avoid returning millions of rows when you only need 10
+
+## 🛠️ **Beginner-Friendly Tools**
+- **MySQL**: MySQL Workbench&#39;s Performance Dashboard
+- **PostgreSQL**: pgAdmin query analyzer
+- **General**: Many hosting providers offer query monitoring dashboards
+
+## 📚 **Great Learning Resources**
+- **Video**: &#34;Database Indexing Explained&#34; on YouTube
+- **Blog**: &#34;Use The Index, Luke!&#34; website
+- **Forums**: Stack Overflow&#39;s database performance tags
+
+Start with checking if your query has proper indexes - this fixes about 80% of slow query issues!</div>
+
+                            
+                            <div class="explanation">
+                                <strong>Judge's Evaluation:</strong><br>
+                                [Score parsing failed, using default score of 3] Unable to parse explanation
+                            </div>
+                            
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <footer>
+            <p>Generated by <a href="https://github.com/sparker/promptlens" target="_blank">PromptLens</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Toggle test case expansion
+        function toggleTestCase(index) {
+            const testCase = document.getElementById(`test-${index}`);
+            testCase.classList.toggle('expanded');
+        }
+
+        // Create score distribution charts
+        const chartData = [{"average_score": 3.0, "name": "claude-sonnet-4-20250514", "result_count": 2, "score_distribution": {"1": 0, "2": 0, "3": 2, "4": 0, "5": 0}, "total_cost": 0.0, "total_latency": 25639.760709000002}];
+
+        chartData.forEach((model, index) => {
+            const ctx = document.getElementById(`chart-${index + 1}`);
+            if (!ctx) return;
+
+            const scores = [1, 2, 3, 4, 5];
+            const counts = scores.map(score => model.score_distribution[score] || 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Score 1', 'Score 2', 'Score 3', 'Score 4', 'Score 5'],
+                    datasets: [{
+                        label: 'Number of Responses',
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(248, 81, 73, 0.8)',
+                            'rgba(255, 149, 0, 0.8)',
+                            'rgba(255, 215, 0, 0.8)',
+                            'rgba(121, 192, 255, 0.8)',
+                            'rgba(63, 185, 80, 0.8)',
+                        ],
+                        borderColor: [
+                            '#f85149',
+                            '#ff9500',
+                            '#ffd700',
+                            '#79c0ff',
+                            '#3fb950',
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#2a3441'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // Staggered animation for test cases
+        document.addEventListener('DOMContentLoaded', () => {
+            const testCases = document.querySelectorAll('.test-case');
+            testCases.forEach((tc, i) => {
+                tc.style.animation = `fadeInUp 0.6s ease-out ${0.1 * i}s both`;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{
+  "run_id": "78ce13c3",
+  "run_name": null,
+  "timestamp": "2026-01-13T22:23:16.708237",
+  "golden_set_name": "you.md Personalization Evaluation",
+  "models_tested": [
+    "claude-sonnet-4-20250514"
+  ],
+  "results": [
+    {
+      "test_case_id": "k8s-networking",
+      "query": "Explain how Kubernetes networking works",
+      "expected_behavior": "Response should be tailored to the user's expertise level.\nFor experts: Should include technical terms like CNI, kube-proxy, iptables, pod networking model.\nFor beginners: Should use analogies, avoid jargon, explain concepts simply.\nResponse depth should match the user's preference.\n",
+      "model_response": {
+        "content": "# Kubernetes Networking Architecture\n\nKubernetes networking operates on a sophisticated multi-layered model that abstracts container communication while maintaining performance and security. The architecture adheres to several fundamental principles that distinguish it from traditional networking approaches.\n\n## Core Networking Model\n\n### Flat Network Assumption\nKubernetes implements a **flat network model** where every Pod receives a unique cluster-wide IP address. This eliminates the need for explicit port mapping or link management between containers, as specified in the [Kubernetes Network Model](https://kubernetes.io/docs/concepts/services-networking/). The model ensures:\n\n- Pods can communicate with other Pods across nodes without NAT\n- Nodes can communicate with all Pods without NAT\n- The IP that a Pod sees itself as is the same IP that others see it as\n\n### Container Network Interface (CNI)\nThe CNI specification defines how network plugins integrate with Kubernetes. The kubelet invokes CNI plugins during Pod lifecycle events:\n\n```bash\n# CNI plugin execution flow\nADD -> Configure network namespace\nDEL -> Cleanup network namespace\nCHECK -> Verify network configuration\nVERSION -> Report plugin version\n```\n\nPopular CNI implementations include:\n- **Calico**: BGP-based with policy enforcement via iptables/eBPF\n- **Flannel**: Overlay networking using VXLAN/host-gw\n- **Cilium**: eBPF-based with advanced observability\n- **Weave**: Mesh networking with built-in service discovery\n\n## Network Layers and Components\n\n### Pod-to-Pod Communication\n\n#### Intra-Node Communication\nPods on the same node communicate through the **cbr0** (Container Bridge 0) or similar bridge interface. The container runtime creates veth pairs:\n\n```\nPod1 (eth0) <--veth--> cbr0 <--veth--> Pod2 (eth0)\n```\n\n#### Inter-Node Communication\nCross-node communication depends on the CNI implementation:\n\n**Overlay Networks (VXLAN/GRE)**:\n```\nPod1 -> Node1 VTEP -> Tunnel -> Node2 VTEP -> Pod2\n```\n\n**Route-based (BGP)**:\n```\nPod1 -> Node1 routing table -> Physical network -> Node2 routing table -> Pod2\n```\n\n### Service Networking\n\n#### ClusterIP Implementation\nServices provide stable endpoints for dynamic Pod sets. The **kube-proxy** component implements service load balancing through multiple modes:\n\n**iptables mode** (default):\n```bash\n# Example iptables rules for service 10.96.0.1:80\n-A KUBE-SERVICES -d 10.96.0.1/32 -p tcp --dport 80 -j KUBE-SVC-HASH\n-A KUBE-SVC-HASH -m statistic --mode random --probability 0.5 -j KUBE-SEP-POD1\n-A KUBE-SVC-HASH -j KUBE-SEP-POD2\n```\n\n**IPVS mode** (higher performance):\nUses Linux Virtual Server for L4 load balancing with algorithms like:\n- Round-robin\n- Least connection\n- Destination hashing\n- Source hashing\n\n#### Service Discovery\nKubernetes provides two primary service discovery mechanisms:\n\n1. **DNS-based**: CoreDNS resolves service names to ClusterIPs\n   ```\n   my-service.my-namespace.svc.cluster.local -> 10.96.0.1\n   ```\n\n2. **Environment variables**: Injected into Pod containers\n   ```bash\n   MY_SERVICE_SERVICE_HOST=10.96.0.1\n   MY_SERVICE_SERVICE_PORT=80\n   ```\n\n### Ingress and Load Balancing\n\n#### Ingress Controllers\nIngress controllers implement L7 load balancing and SSL termination. Popular implementations:\n\n- **NGINX Ingress**: High-performance reverse proxy\n- **Traefik**: Cloud-native with automatic service discovery\n- **Istio Gateway**: Service mesh integration\n- **HAProxy Ingress**: Enterprise-grade load balancing\n\n#### External Load Balancer Integration\nFor cloud environments, Kubernetes integrates with provider load balancers:\n\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  annotations:\n    service.beta.kubernetes.io/aws-load-balancer-type: nlb\nspec:\n  type: LoadBal",
+        "model": "claude-sonnet-4-20250514",
+        "provider": "anthropic",
+        "tokens_used": 1184,
+        "prompt_tokens": 160,
+        "completion_tokens": 1024,
+        "latency_ms": 21294.262709,
+        "cost_usd": 0.0,
+        "error": null,
+        "timestamp": "2026-01-13T22:23:10.905142",
+        "tool_calls": [],
+        "stop_reason": "max_tokens"
+      },
+      "judge_score": {
+        "score": 3,
+        "explanation": "[Score parsing failed, using default score of 3] Unable to parse explanation",
+        "criteria_scores": {},
+        "judge_model": "claude-sonnet-4-20250514",
+        "judge_provider": "anthropic",
+        "timestamp": "2026-01-13T22:23:16.702541",
+        "tool_evaluations": [],
+        "tool_usage_score": null,
+        "tool_efficiency_score": null
+      },
+      "timestamp": "2026-01-13T22:23:16.702567"
+    },
+    {
+      "test_case_id": "debug-slow-query",
+      "query": "How would you debug a slow database query?",
+      "expected_behavior": "Response should match the user's technical level.\nFor experts: Should mention EXPLAIN plans, query optimizer, index strategies, profiling tools.\nFor beginners: Should provide step-by-step guidance, explain what indexes are, suggest simple tools.\nResponse should be appropriately detailed based on preference.\n",
+      "model_response": {
+        "content": "# Database Query Performance Debugging: A Systematic Approach\n\n## 1. Query Execution Analysis\n\n### Execution Plan Examination\nStart with `EXPLAIN` (or `EXPLAIN ANALYZE` for actual runtime statistics):\n\n```sql\n-- PostgreSQL\nEXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...;\n\n-- MySQL\nEXPLAIN FORMAT=JSON SELECT ...;\n\n-- SQL Server\nSET STATISTICS IO ON;\nSET STATISTICS TIME ON;\n```\n\nKey metrics to analyze:\n- **Cost estimates vs. actual costs** - Large discrepancies indicate stale statistics\n- **Cardinality estimation errors** - Often root cause of suboptimal plans\n- **Join algorithms** - Hash joins for large datasets, nested loops for small\n- **Buffer hit ratios** - Low ratios indicate excessive disk I/O\n\n### Query Rewrite Analysis\nExamine the optimizer's query rewrite phase:\n```sql\n-- PostgreSQL: Enable detailed logging\nSET log_statement_stats = on;\nSET log_parser_stats = on;\nSET log_planner_stats = on;\n```\n\n## 2. Index Analysis and Optimization\n\n### Index Effectiveness Assessment\n```sql\n-- PostgreSQL: Index usage statistics\nSELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch\nFROM pg_stat_user_indexes \nWHERE idx_scan < 10;  -- Potentially unused indexes\n\n-- Check index bloat\nSELECT schemaname, tablename, \n       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,\n       pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,\n       pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) as index_size\nFROM pg_tables;\n```\n\n### Advanced Indexing Strategies\n- **Partial indexes** for filtered queries: `CREATE INDEX ON table (col) WHERE condition;`\n- **Expression indexes** for computed values: `CREATE INDEX ON table (LOWER(email));`\n- **Covering indexes** to avoid table lookups: `CREATE INDEX ON table (col1) INCLUDE (col2, col3);`\n- **Multi-column index ordering** based on selectivity and query patterns\n\n## 3. System-Level Performance Analysis\n\n### I/O Subsystem Analysis\n```bash\n# Linux: Monitor I/O patterns\niostat -x 1\niotop -ao\n\n# Check for I/O wait\nvmstat 1\n```\n\nKey indicators:\n- **%iowait > 10%** suggests I/O bottleneck\n- **avgqu-sz > 2** indicates queue depth issues\n- **Random vs. sequential I/O patterns** - Sequential is ~100x faster for HDDs\n\n### Memory and Buffer Pool Analysis\n```sql\n-- PostgreSQL: Buffer cache hit ratio\nSELECT \n  round(blks_hit::numeric/(blks_hit + blks_read) * 100, 2) as cache_hit_ratio\nFROM pg_stat_database \nWHERE datname = current_database();\n\n-- Check for memory pressure\nSELECT name, setting, unit, context \nFROM pg_settings \nWHERE name IN ('shared_buffers', 'effective_cache_size', 'work_mem');\n```\n\n## 4. Lock Contention and Concurrency Issues\n\n### Lock Analysis\n```sql\n-- PostgreSQL: Current locks and blocking queries\nSELECT \n  blocked_locks.pid AS blocked_pid,\n  blocked_activity.usename AS blocked_user,\n  blocking_locks.pid AS blocking_pid,\n  blocking_activity.usename AS blocking_user,\n  blocked_activity.query AS blocked_statement,\n  blocking_activity.query AS current_statement_in_blocking_process\nFROM pg_catalog.pg_locks blocked_locks\nJOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid\nJOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype\nJOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid\nWHERE NOT blocked_locks.granted;\n```\n\n### Deadlock Detection\nEnable deadlock logging and analyze patterns:\n```sql\n-- PostgreSQL\nALTER SYSTEM SET log_lock_waits",
+        "model": "claude-sonnet-4-20250514",
+        "provider": "anthropic",
+        "tokens_used": 1186,
+        "prompt_tokens": 162,
+        "completion_tokens": 1024,
+        "latency_ms": 18973.411709,
+        "cost_usd": 0.0,
+        "error": null,
+        "timestamp": "2026-01-13T22:23:08.585664",
+        "tool_calls": [],
+        "stop_reason": "max_tokens"
+      },
+      "judge_score": {
+        "score": 3,
+        "explanation": "[Score parsing failed, using default score of 3] Unable to parse explanation",
+        "criteria_scores": {},
+        "judge_model": "claude-sonnet-4-20250514",
+        "judge_provider": "anthropic",
+        "timestamp": "2026-01-13T22:23:12.685172",
+        "tool_evaluations": [],
+        "tool_usage_score": null,
+        "tool_efficiency_score": null
+      },
+      "timestamp": "2026-01-13T22:23:12.685233"
+    }
+  ],
+  "total_cost_usd": 0.0,
+  "total_time_ms": 40267.674417999995,
+  "metadata": {
+    "golden_set_path": "./golden_set.yaml",
+    "test_case_count": 4,
+    "provider_count": 1
+  }
+}

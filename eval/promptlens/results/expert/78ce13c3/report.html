@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unnamed Run - PromptLens Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #12171f;
+            --bg-tertiary: #1a2130;
+            --border: #2a3441;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-cyan: #00d9ff;
+            --accent-purple: #a371f7;
+            --accent-orange: #ff9500;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --score-1: #f85149;
+            --score-2: #ff9500;
+            --score-3: #ffd700;
+            --score-4: #79c0ff;
+            --score-5: #3fb950;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Background Effects */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(0, 217, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(163, 113, 247, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            padding: 3rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3rem;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 2rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+        }
+
+        .header-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-meta strong {
+            color: var(--accent-cyan);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-value.accent-cyan { color: var(--accent-cyan); }
+        .stat-value.accent-purple { color: var(--accent-purple); }
+        .stat-value.accent-orange { color: var(--accent-orange); }
+        .stat-value.accent-green { color: var(--accent-green); }
+
+        /* Section Headers */
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 3rem 0 1.5rem;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 2rem;
+            background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 2px;
+        }
+
+        /* Model Cards */
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .model-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            animation: fadeInUp 0.8s ease-out both;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:nth-child(1) { animation-delay: 0.1s; }
+        .model-card:nth-child(2) { animation-delay: 0.2s; }
+        .model-card:nth-child(3) { animation-delay: 0.3s; }
+        .model-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .model-card:hover {
+            border-color: var(--accent-purple);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(163, 113, 247, 0.1);
+        }
+
+        .model-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--accent-cyan);
+        }
+
+        .model-metrics {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .metric-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .score-5 { background: var(--score-5); color: var(--bg-primary); }
+        .score-4 { background: var(--score-4); color: var(--bg-primary); }
+        .score-3 { background: var(--score-3); color: var(--bg-primary); }
+        .score-2 { background: var(--score-2); color: var(--bg-primary); }
+        .score-1 { background: var(--score-1); color: var(--bg-primary); }
+
+        /* Charts */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Test Cases */
+        .test-cases {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .test-case {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .test-case:hover {
+            border-color: var(--border);
+        }
+
+        .test-case-header {
+            padding: 1.5rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .test-case-header:hover {
+            background: rgba(42, 52, 65, 0.5);
+        }
+
+        .test-case-id {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-purple);
+            font-size: 0.875rem;
+        }
+
+        .test-case-query {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .test-case-expected {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .test-case.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .test-case-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .test-case.expanded .test-case-body {
+            max-height: 5000px;
+        }
+
+        .model-results {
+            display: grid;
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        .model-result {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .model-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .model-result-name {
+            font-weight: 600;
+            color: var(--accent-cyan);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .model-result-stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .response-text {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent-purple);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .explanation {
+            background: rgba(0, 217, 255, 0.05);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .error-box {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--accent-red);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: var(--accent-red);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 5rem;
+            padding: 2rem 0 3rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-purple);
+        }
+
+        /* Utilities */
+        .mono {
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .header-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .stats-grid,
+            .models-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Unnamed Run</h1>
+            <div class="header-meta">
+                <span><strong>Run ID:</strong> 78ce13c3</span>
+                <span><strong>Timestamp:</strong> 2026-01-13 22:23:16 UTC</span>
+                <span><strong>Golden Set:</strong> you.md Personalization Evaluation</span>
+            </div>
+        </header>
+
+        <!-- Summary Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Cost</div>
+                <div class="stat-value accent-orange">$0.0000</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Time</div>
+                <div class="stat-value accent-cyan">40268ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Test Cases</div>
+                <div class="stat-value accent-purple">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Models Tested</div>
+                <div class="stat-value accent-green">1</div>
+            </div>
+        </div>
+
+        <!-- Model Results -->
+        <h2>Model Performance</h2>
+        <div class="models-grid">
+            
+            <div class="model-card">
+                <div class="model-name">claude-sonnet-4-20250514</div>
+                <div class="model-metrics">
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">Average Score</span>
+                        <span class="metric-value">
+                            
+                            <span class="score-badge score-3">
+                                3.00/5.0
+                            </span>
+                        </span>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">Total Cost</span>
+                        <span class="metric-value">$0.0000</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Time</span>
+                        <span class="metric-value">40268ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Evaluations</span>
+                        <span class="metric-value">2</span>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Charts -->
+        <h2>Score Distribution</h2>
+        <div class="charts-container">
+            
+            <div class="chart-card">
+                <div class="chart-title">claude-sonnet-4-20250514</div>
+                <canvas id="chart-1" width="400" height="300"></canvas>
+            </div>
+            
+        </div>
+
+        <!-- Test Cases -->
+        <h2>Detailed Results</h2>
+        <div class="test-cases">
+            
+            <div class="test-case" id="test-1">
+                <div class="test-case-header" onclick="toggleTestCase(1)">
+                    <div>
+                        <div class="test-case-id">k8s-networking</div>
+                        <div class="test-case-query">Explain how Kubernetes networking works</div>
+                        <div class="test-case-expected"><strong>Expected:</strong> Response should be tailored to the user&#39;s expertise level.
+For experts: Should include technical terms like CNI, kube-proxy, iptables, pod networking model.
+For beginners: Should use analogies, avoid jargon, explain concepts simply.
+Response depth should match the user&#39;s preference.
+</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="test-case-body">
+                    <div class="model-results">
+                        
+                        <div class="model-result">
+                            <div class="model-result-header">
+                                <span class="model-result-name">claude-sonnet-4-20250514</span>
+                                <div class="model-result-stats">
+                                    
+                                    <span class="score-badge score-3">Score: 3/5</span>
+                                    
+                                    <span>21294ms</span>
+                                    <span>$0.0000</span>
+                                </div>
+                            </div>
+
+                            
+                            <div class="response-text"># Kubernetes Networking Architecture
+
+Kubernetes networking operates on a sophisticated multi-layered model that abstracts container communication while maintaining performance and security. The architecture adheres to several fundamental principles that distinguish it from traditional networking approaches.
+
+## Core Networking Model
+
+### Flat Network Assumption
+Kubernetes implements a **flat network model** where every Pod receives a unique cluster-wide IP address. This eliminates the need for explicit port mapping or link management between containers, as specified in the [Kubernetes Network Model](https://kubernetes.io/docs/concepts/services-networking/). The model ensures:
+
+- Pods can communicate with other Pods across nodes without NAT
+- Nodes can communicate with all Pods without NAT
+- The IP that a Pod sees itself as is the same IP that others see it as
+
+### Container Network Interface (CNI)
+The CNI specification defines how network plugins integrate with Kubernetes. The kubelet invokes CNI plugins during Pod lifecycle events:
+
+```bash
+# CNI plugin execution flow
+ADD -&gt; Configure network namespace
+DEL -&gt; Cleanup network namespace
+CHECK -&gt; Verify network configuration
+VERSION -&gt; Report plugin version
+```
+
+Popular CNI implementations include:
+- **Calico**: BGP-based with policy enforcement via iptables/eBPF
+- **Flannel**: Overlay networking using VXLAN/host-gw
+- **Cilium**: eBPF-based with advanced observability
+- **Weave**: Mesh networking with built-in service discovery
+
+## Network Layers and Components
+
+### Pod-to-Pod Communication
+
+#### Intra-Node Communication
+Pods on the same node communicate through the **cbr0** (Container Bridge 0) or similar bridge interface. The container runtime creates veth pairs:
+
+```
+Pod1 (eth0) &lt;--veth--&gt; cbr0 &lt;--veth--&gt; Pod2 (eth0)
+```
+
+#### Inter-Node Communication
+Cross-node communication depends on the CNI implementation:
+
+**Overlay Networks (VXLAN/GRE)**:
+```
+Pod1 -&gt; Node1 VTEP -&gt; Tunnel -&gt; Node2 VTEP -&gt; Pod2
+```
+
+**Route-based (BGP)**:
+```
+Pod1 -&gt; Node1 routing table -&gt; Physical network -&gt; Node2 routing table -&gt; Pod2
+```
+
+### Service Networking
+
+#### ClusterIP Implementation
+Services provide stable endpoints for dynamic Pod sets. The **kube-proxy** component implements service load balancing through multiple modes:
+
+**iptables mode** (default):
+```bash
+# Example iptables rules for service 10.96.0.1:80
+-A KUBE-SERVICES -d 10.96.0.1/32 -p tcp --dport 80 -j KUBE-SVC-HASH
+-A KUBE-SVC-HASH -m statistic --mode random --probability 0.5 -j KUBE-SEP-POD1
+-A KUBE-SVC-HASH -j KUBE-SEP-POD2
+```
+
+**IPVS mode** (higher performance):
+Uses Linux Virtual Server for L4 load balancing with algorithms like:
+- Round-robin
+- Least connection
+- Destination hashing
+- Source hashing
+
+#### Service Discovery
+Kubernetes provides two primary service discovery mechanisms:
+
+1. **DNS-based**: CoreDNS resolves service names to ClusterIPs
+   ```
+   my-service.my-namespace.svc.cluster.local -&gt; 10.96.0.1
+   ```
+
+2. **Environment variables**: Injected into Pod containers
+   ```bash
+   MY_SERVICE_SERVICE_HOST=10.96.0.1
+   MY_SERVICE_SERVICE_PORT=80
+   ```
+
+### Ingress and Load Balancing
+
+#### Ingress Controllers
+Ingress controllers implement L7 load balancing and SSL termination. Popular implementations:
+
+- **NGINX Ingress**: High-performance reverse proxy
+- **Traefik**: Cloud-native with automatic service discovery
+- **Istio Gateway**: Service mesh integration
+- **HAProxy Ingress**: Enterprise-grade load balancing
+
+#### External Load Balancer Integration
+For cloud environments, Kubernetes integrates with provider load balancers:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+spec:
+  type: LoadBal</div>
+
+                            
+                            <div class="explanation">
+                                <strong>Judge's Evaluation:</strong><br>
+                                [Score parsing failed, using default score of 3] Unable to parse explanation
+                            </div>
+                            
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-case" id="test-2">
+                <div class="test-case-header" onclick="toggleTestCase(2)">
+                    <div>
+                        <div class="test-case-id">debug-slow-query</div>
+                        <div class="test-case-query">How would you debug a slow database query?</div>
+                        <div class="test-case-expected"><strong>Expected:</strong> Response should match the user&#39;s technical level.
+For experts: Should mention EXPLAIN plans, query optimizer, index strategies, profiling tools.
+For beginners: Should provide step-by-step guidance, explain what indexes are, suggest simple tools.
+Response should be appropriately detailed based on preference.
+</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="test-case-body">
+                    <div class="model-results">
+                        
+                        <div class="model-result">
+                            <div class="model-result-header">
+                                <span class="model-result-name">claude-sonnet-4-20250514</span>
+                                <div class="model-result-stats">
+                                    
+                                    <span class="score-badge score-3">Score: 3/5</span>
+                                    
+                                    <span>18973ms</span>
+                                    <span>$0.0000</span>
+                                </div>
+                            </div>
+
+                            
+                            <div class="response-text"># Database Query Performance Debugging: A Systematic Approach
+
+## 1. Query Execution Analysis
+
+### Execution Plan Examination
+Start with `EXPLAIN` (or `EXPLAIN ANALYZE` for actual runtime statistics):
+
+```sql
+-- PostgreSQL
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...;
+
+-- MySQL
+EXPLAIN FORMAT=JSON SELECT ...;
+
+-- SQL Server
+SET STATISTICS IO ON;
+SET STATISTICS TIME ON;
+```
+
+Key metrics to analyze:
+- **Cost estimates vs. actual costs** - Large discrepancies indicate stale statistics
+- **Cardinality estimation errors** - Often root cause of suboptimal plans
+- **Join algorithms** - Hash joins for large datasets, nested loops for small
+- **Buffer hit ratios** - Low ratios indicate excessive disk I/O
+
+### Query Rewrite Analysis
+Examine the optimizer&#39;s query rewrite phase:
+```sql
+-- PostgreSQL: Enable detailed logging
+SET log_statement_stats = on;
+SET log_parser_stats = on;
+SET log_planner_stats = on;
+```
+
+## 2. Index Analysis and Optimization
+
+### Index Effectiveness Assessment
+```sql
+-- PostgreSQL: Index usage statistics
+SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch
+FROM pg_stat_user_indexes 
+WHERE idx_scan &lt; 10;  -- Potentially unused indexes
+
+-- Check index bloat
+SELECT schemaname, tablename, 
+       pg_size_pretty(pg_total_relation_size(schemaname||&#39;.&#39;||tablename)) as size,
+       pg_size_pretty(pg_relation_size(schemaname||&#39;.&#39;||tablename)) as table_size,
+       pg_size_pretty(pg_indexes_size(schemaname||&#39;.&#39;||tablename)) as index_size
+FROM pg_tables;
+```
+
+### Advanced Indexing Strategies
+- **Partial indexes** for filtered queries: `CREATE INDEX ON table (col) WHERE condition;`
+- **Expression indexes** for computed values: `CREATE INDEX ON table (LOWER(email));`
+- **Covering indexes** to avoid table lookups: `CREATE INDEX ON table (col1) INCLUDE (col2, col3);`
+- **Multi-column index ordering** based on selectivity and query patterns
+
+## 3. System-Level Performance Analysis
+
+### I/O Subsystem Analysis
+```bash
+# Linux: Monitor I/O patterns
+iostat -x 1
+iotop -ao
+
+# Check for I/O wait
+vmstat 1
+```
+
+Key indicators:
+- **%iowait &gt; 10%** suggests I/O bottleneck
+- **avgqu-sz &gt; 2** indicates queue depth issues
+- **Random vs. sequential I/O patterns** - Sequential is ~100x faster for HDDs
+
+### Memory and Buffer Pool Analysis
+```sql
+-- PostgreSQL: Buffer cache hit ratio
+SELECT 
+  round(blks_hit::numeric/(blks_hit + blks_read) * 100, 2) as cache_hit_ratio
+FROM pg_stat_database 
+WHERE datname = current_database();
+
+-- Check for memory pressure
+SELECT name, setting, unit, context 
+FROM pg_settings 
+WHERE name IN (&#39;shared_buffers&#39;, &#39;effective_cache_size&#39;, &#39;work_mem&#39;);
+```
+
+## 4. Lock Contention and Concurrency Issues
+
+### Lock Analysis
+```sql
+-- PostgreSQL: Current locks and blocking queries
+SELECT 
+  blocked_locks.pid AS blocked_pid,
+  blocked_activity.usename AS blocked_user,
+  blocking_locks.pid AS blocking_pid,
+  blocking_activity.usename AS blocking_user,
+  blocked_activity.query AS blocked_statement,
+  blocking_activity.query AS current_statement_in_blocking_process
+FROM pg_catalog.pg_locks blocked_locks
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
+JOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+WHERE NOT blocked_locks.granted;
+```
+
+### Deadlock Detection
+Enable deadlock logging and analyze patterns:
+```sql
+-- PostgreSQL
+ALTER SYSTEM SET log_lock_waits</div>
+
+                            
+                            <div class="explanation">
+                                <strong>Judge's Evaluation:</strong><br>
+                                [Score parsing failed, using default score of 3] Unable to parse explanation
+                            </div>
+                            
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <footer>
+            <p>Generated by <a href="https://github.com/sparker/promptlens" target="_blank">PromptLens</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Toggle test case expansion
+        function toggleTestCase(index) {
+            const testCase = document.getElementById(`test-${index}`);
+            testCase.classList.toggle('expanded');
+        }
+
+        // Create score distribution charts
+        const chartData = [{"average_score": 3.0, "name": "claude-sonnet-4-20250514", "result_count": 2, "score_distribution": {"1": 0, "2": 0, "3": 2, "4": 0, "5": 0}, "total_cost": 0.0, "total_latency": 40267.674417999995}];
+
+        chartData.forEach((model, index) => {
+            const ctx = document.getElementById(`chart-${index + 1}`);
+            if (!ctx) return;
+
+            const scores = [1, 2, 3, 4, 5];
+            const counts = scores.map(score => model.score_distribution[score] || 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Score 1', 'Score 2', 'Score 3', 'Score 4', 'Score 5'],
+                    datasets: [{
+                        label: 'Number of Responses',
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(248, 81, 73, 0.8)',
+                            'rgba(255, 149, 0, 0.8)',
+                            'rgba(255, 215, 0, 0.8)',
+                            'rgba(121, 192, 255, 0.8)',
+                            'rgba(63, 185, 80, 0.8)',
+                        ],
+                        borderColor: [
+                            '#f85149',
+                            '#ff9500',
+                            '#ffd700',
+                            '#79c0ff',
+                            '#3fb950',
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#2a3441'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // Staggered animation for test cases
+        document.addEventListener('DOMContentLoaded', () => {
+            const testCases = document.querySelectorAll('.test-case');
+            testCases.forEach((tc, i) => {
+                tc.style.animation = `fadeInUp 0.6s ease-out ${0.1 * i}s both`;
+            });
+        });
+    </script>
+</body>
+</html>

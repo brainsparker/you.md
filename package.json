@@ -32,7 +32,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm run test"
+    "prepublishOnly": "npm run build && npm run test",
+    "eval:search": "npx tsx eval/search_eval.ts",
+    "eval:agent": "npx tsx eval/agent_eval.ts",
+    "eval": "npm run eval:search && npm run eval:agent"
   },
   "keywords": [
     "you.md",
@@ -60,10 +63,12 @@
   },
   "homepage": "https://github.com/briansparker/You#readme",
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@types/node": "^25.0.3",
     "@types/prompts": "^2.4.9",
     "@vitest/coverage-v8": "^2.1.0",
     "tsup": "^8.5.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   },

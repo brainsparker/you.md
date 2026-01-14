@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unnamed Run - PromptLens Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #12171f;
+            --bg-tertiary: #1a2130;
+            --border: #2a3441;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-cyan: #00d9ff;
+            --accent-purple: #a371f7;
+            --accent-orange: #ff9500;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --score-1: #f85149;
+            --score-2: #ff9500;
+            --score-3: #ffd700;
+            --score-4: #79c0ff;
+            --score-5: #3fb950;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Background Effects */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(0, 217, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(163, 113, 247, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            padding: 3rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3rem;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 2rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+        }
+
+        .header-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-meta strong {
+            color: var(--accent-cyan);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-value.accent-cyan { color: var(--accent-cyan); }
+        .stat-value.accent-purple { color: var(--accent-purple); }
+        .stat-value.accent-orange { color: var(--accent-orange); }
+        .stat-value.accent-green { color: var(--accent-green); }
+
+        /* Section Headers */
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 3rem 0 1.5rem;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 2rem;
+            background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 2px;
+        }
+
+        /* Model Cards */
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .model-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            animation: fadeInUp 0.8s ease-out both;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:nth-child(1) { animation-delay: 0.1s; }
+        .model-card:nth-child(2) { animation-delay: 0.2s; }
+        .model-card:nth-child(3) { animation-delay: 0.3s; }
+        .model-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .model-card:hover {
+            border-color: var(--accent-purple);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(163, 113, 247, 0.1);
+        }
+
+        .model-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--accent-cyan);
+        }
+
+        .model-metrics {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .metric-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .score-5 { background: var(--score-5); color: var(--bg-primary); }
+        .score-4 { background: var(--score-4); color: var(--bg-primary); }
+        .score-3 { background: var(--score-3); color: var(--bg-primary); }
+        .score-2 { background: var(--score-2); color: var(--bg-primary); }
+        .score-1 { background: var(--score-1); color: var(--bg-primary); }
+
+        /* Charts */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Test Cases */
+        .test-cases {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .test-case {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .test-case:hover {
+            border-color: var(--border);
+        }
+
+        .test-case-header {
+            padding: 1.5rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .test-case-header:hover {
+            background: rgba(42, 52, 65, 0.5);
+        }
+
+        .test-case-id {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-purple);
+            font-size: 0.875rem;
+        }
+
+        .test-case-query {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .test-case-expected {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .test-case.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .test-case-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .test-case.expanded .test-case-body {
+            max-height: 5000px;
+        }
+
+        .model-results {
+            display: grid;
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        .model-result {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .model-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .model-result-name {
+            font-weight: 600;
+            color: var(--accent-cyan);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .model-result-stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .response-text {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent-purple);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .explanation {
+            background: rgba(0, 217, 255, 0.05);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .error-box {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--accent-red);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: var(--accent-red);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 5rem;
+            padding: 2rem 0 3rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-purple);
+        }
+
+        /* Utilities */
+        .mono {
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .header-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .stats-grid,
+            .models-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Unnamed Run</h1>
+            <div class="header-meta">
+                <span><strong>Run ID:</strong> 3720daf7</span>
+                <span><strong>Timestamp:</strong> 2026-01-13 22:22:48 UTC</span>
+                <span><strong>Golden Set:</strong> you.md Personalization Evaluation</span>
+            </div>
+        </header>
+
+        <!-- Summary Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Cost</div>
+                <div class="stat-value accent-orange">$0.0000</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Time</div>
+                <div class="stat-value accent-cyan">35067ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Test Cases</div>
+                <div class="stat-value accent-purple">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Models Tested</div>
+                <div class="stat-value accent-green">1</div>
+            </div>
+        </div>
+
+        <!-- Model Results -->
+        <h2>Model Performance</h2>
+        <div class="models-grid">
+            
+            <div class="model-card">
+                <div class="model-name">claude-sonnet-4-20250514</div>
+                <div class="model-metrics">
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">Average Score</span>
+                        <span class="metric-value">
+                            
+                            <span class="score-badge score-3">
+                                3.00/5.0
+                            </span>
+                        </span>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <span class="metric-label">Total Cost</span>
+                        <span class="metric-value">$0.0000</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Time</span>
+                        <span class="metric-value">35067ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Evaluations</span>
+                        <span class="metric-value">2</span>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Charts -->
+        <h2>Score Distribution</h2>
+        <div class="charts-container">
+            
+            <div class="chart-card">
+                <div class="chart-title">claude-sonnet-4-20250514</div>
+                <canvas id="chart-1" width="400" height="300"></canvas>
+            </div>
+            
+        </div>
+
+        <!-- Test Cases -->
+        <h2>Detailed Results</h2>
+        <div class="test-cases">
+            
+            <div class="test-case" id="test-1">
+                <div class="test-case-header" onclick="toggleTestCase(1)">
+                    <div>
+                        <div class="test-case-id">k8s-networking</div>
+                        <div class="test-case-query">Explain how Kubernetes networking works</div>
+                        <div class="test-case-expected"><strong>Expected:</strong> Response should be tailored to the user&#39;s expertise level.
+For experts: Should include technical terms like CNI, kube-proxy, iptables, pod networking model.
+For beginners: Should use analogies, avoid jargon, explain concepts simply.
+Response depth should match the user&#39;s preference.
+</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="test-case-body">
+                    <div class="model-results">
+                        
+                        <div class="model-result">
+                            <div class="model-result-header">
+                                <span class="model-result-name">claude-sonnet-4-20250514</span>
+                                <div class="model-result-stats">
+                                    
+                                    <span class="score-badge score-3">Score: 3/5</span>
+                                    
+                                    <span>16827ms</span>
+                                    <span>$0.0000</span>
+                                </div>
+                            </div>
+
+                            
+                            <div class="response-text"># Kubernetes Networking Overview
+
+Kubernetes networking is built on several fundamental principles and components that work together to enable communication between pods, services, and external resources. Let me break this down systematically.
+
+## Core Networking Principles
+
+Kubernetes follows these key networking rules:
+- **Every pod gets its own IP address** - no need for port mapping
+- **Pods can communicate with each other** without NAT across nodes
+- **Agents on nodes can communicate with all pods** on that node
+- **Flat network space** - all pods exist in the same network namespace
+
+## Key Networking Components
+
+### 1. Pod Networking
+
+```yaml
+# Each pod gets an IP from the cluster CIDR
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: app
+    image: nginx
+    ports:
+    - containerPort: 80
+```
+
+- Pods within the same node share the node&#39;s network namespace
+- Containers in a pod share the same IP and can communicate via localhost
+- Pod IPs are ephemeral and change when pods are recreated
+
+### 2. Services
+
+Services provide stable networking for dynamic pod environments:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: my-app
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP  # Default type
+```
+
+**Service Types:**
+- **ClusterIP**: Internal cluster communication only
+- **NodePort**: Exposes service on each node&#39;s IP at a static port
+- **LoadBalancer**: Provisions external load balancer (cloud provider)
+- **ExternalName**: Maps service to external DNS name
+
+### 3. Container Network Interface (CNI)
+
+CNI plugins handle the actual network implementation:
+
+**Popular CNI plugins:**
+- **Flannel**: Simple overlay network using VXLAN
+- **Calico**: Layer 3 networking with network policies
+- **Weave**: Mesh networking with encryption
+- **Cilium**: eBPF-based networking with advanced features
+
+## Network Flow Examples
+
+### Pod-to-Pod Communication (Same Node)
+```
+Pod A (10.244.1.10) → Virtual Bridge → Pod B (10.244.1.11)
+```
+
+### Pod-to-Pod Communication (Different Nodes)
+```
+Pod A (10.244.1.10) → Node 1 → Overlay Network → Node 2 → Pod B (10.244.2.10)
+```
+
+### Service Discovery
+```yaml
+# Service creates endpoints
+apiVersion: v1
+kind: Service
+metadata:
+  name: database
+spec:
+  selector:
+    app: db
+  ports:
+  - port: 5432
+
+---
+# Pods can reach service by name
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: app
+    env:
+    - name: DB_HOST
+      value: &#34;database&#34;  # Resolves to service IP
+```
+
+## Advanced Networking Concepts
+
+### 1. Network Policies
+
+Control traffic flow between pods:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  # This policy denies all traffic
+```
+
+### 2. Ingress Controllers
+
+Manage external access to services:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+spec:
+  rules:
+  - host: myapp.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: my-service
+            port:
+              number: 80
+```
+
+## Network Architecture Layers
+
+```
+┌─────────────────────────────────────┐
+│           External Traffic          │
+├─────────────────────────────────────┤
+│      Ingress/Load Balancer         │
+├─────────────────────────────────────┤
+│           Services Layer            │
+├─────────────────────────────────────┤
+│            Pod Network              │
+├─────────────────</div>
+
+                            
+                            <div class="explanation">
+                                <strong>Judge's Evaluation:</strong><br>
+                                [Score parsing failed, using default score of 3] Unable to parse explanation
+                            </div>
+                            
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-case" id="test-2">
+                <div class="test-case-header" onclick="toggleTestCase(2)">
+                    <div>
+                        <div class="test-case-id">debug-slow-query</div>
+                        <div class="test-case-query">How would you debug a slow database query?</div>
+                        <div class="test-case-expected"><strong>Expected:</strong> Response should match the user&#39;s technical level.
+For experts: Should mention EXPLAIN plans, query optimizer, index strategies, profiling tools.
+For beginners: Should provide step-by-step guidance, explain what indexes are, suggest simple tools.
+Response should be appropriately detailed based on preference.
+</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="test-case-body">
+                    <div class="model-results">
+                        
+                        <div class="model-result">
+                            <div class="model-result-header">
+                                <span class="model-result-name">claude-sonnet-4-20250514</span>
+                                <div class="model-result-stats">
+                                    
+                                    <span class="score-badge score-3">Score: 3/5</span>
+                                    
+                                    <span>18240ms</span>
+                                    <span>$0.0000</span>
+                                </div>
+                            </div>
+
+                            
+                            <div class="response-text">Here&#39;s a systematic approach to debugging slow database queries:
+
+## 1. **Identify and Measure the Problem**
+
+```sql
+-- Enable query logging (MySQL example)
+SET long_query_time = 1;
+SET slow_query_log = ON;
+
+-- Check current running queries
+SHOW PROCESSLIST;
+
+-- Get query execution time
+SELECT SQL_NO_CACHE * FROM users WHERE email = &#39;user@example.com&#39;;
+```
+
+## 2. **Analyze the Query Execution Plan**
+
+```sql
+-- PostgreSQL
+EXPLAIN ANALYZE SELECT * FROM orders o 
+JOIN customers c ON o.customer_id = c.id 
+WHERE o.order_date &gt; &#39;2023-01-01&#39;;
+
+-- MySQL
+EXPLAIN FORMAT=JSON SELECT * FROM orders o 
+JOIN customers c ON o.customer_id = c.id 
+WHERE o.order_date &gt; &#39;2023-01-01&#39;;
+```
+
+Look for:
+- **Sequential scans** instead of index scans
+- **High cost operations**
+- **Large row estimates vs actual rows**
+- **Nested loops** on large datasets
+
+## 3. **Check and Optimize Indexes**
+
+```sql
+-- Identify missing indexes
+SELECT * FROM pg_stat_user_tables WHERE schemaname = &#39;public&#39;;
+
+-- Create appropriate indexes
+CREATE INDEX idx_orders_date ON orders(order_date);
+CREATE INDEX idx_orders_customer_date ON orders(customer_id, order_date);
+
+-- Check index usage
+SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read 
+FROM pg_stat_user_indexes;
+```
+
+## 4. **Query Structure Analysis**
+
+### Common Issues to Check:
+
+**Inefficient WHERE clauses:**
+```sql
+-- Bad: Function on indexed column
+SELECT * FROM users WHERE UPPER(email) = &#39;USER@EXAMPLE.COM&#39;;
+
+-- Good: Use functional index or modify query
+SELECT * FROM users WHERE email = &#39;user@example.com&#39;;
+```
+
+**N+1 Query Problems:**
+```sql
+-- Bad: Multiple queries
+SELECT * FROM posts;
+-- Then for each post: SELECT * FROM comments WHERE post_id = ?
+
+-- Good: Single join query
+SELECT p.*, c.* FROM posts p 
+LEFT JOIN comments c ON p.id = c.post_id;
+```
+
+## 5. **Resource and System Checks**
+
+```sql
+-- Check database stats
+SELECT * FROM pg_stat_database WHERE datname = &#39;your_db&#39;;
+
+-- Monitor locks
+SELECT * FROM pg_locks WHERE NOT granted;
+
+-- Check buffer cache hit ratio
+SELECT 
+  round(blks_hit*100/(blks_hit+blks_read), 2) AS cache_hit_ratio
+FROM pg_stat_database WHERE datname = &#39;your_db&#39;;
+```
+
+## 6. **Query Optimization Techniques**
+
+### Limit Result Sets:
+```sql
+-- Add appropriate LIMIT
+SELECT * FROM large_table ORDER BY created_at DESC LIMIT 100;
+
+-- Use pagination instead of OFFSET for large datasets
+SELECT * FROM posts WHERE id &gt; 1000 ORDER BY id LIMIT 20;
+```
+
+### Optimize JOINs:
+```sql
+-- Ensure JOIN conditions use indexed columns
+-- Consider JOIN order for better performance
+SELECT c.name, COUNT(o.id) as order_count
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+WHERE c.created_at &gt; &#39;2023-01-01&#39;
+GROUP BY c.id, c.name;
+```
+
+## 7. **Database Configuration Tuning**
+
+```sql
+-- PostgreSQL example configurations
+-- postgresql.conf adjustments:
+shared_buffers = 256MB
+work_mem = 4MB
+maintenance_work_mem = 64MB
+effective_cache_size = 1GB
+random_page_cost = 1.1
+```
+
+## 8. **Monitoring and Tools**
+
+Use database-specific tools:
+- **PostgreSQL**: pg_stat_statements, pgBadger
+- **MySQL**: Performance Schema, MySQL Workbench
+- **Application-level**: Query profilers, APM tools
+
+## 9. **Testing and Validation**
+
+```sql
+-- Before optimization
+\timing
+SELECT COUNT(*) FROM slow_query_here;
+
+-- After optimization  
+SELECT COUNT(*) FROM optimized_query_here;
+
+-- Compare execution plans</div>
+
+                            
+                            <div class="explanation">
+                                <strong>Judge's Evaluation:</strong><br>
+                                [Score parsing failed, using default score of 3] Unable to parse explanation
+                            </div>
+                            
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <footer>
+            <p>Generated by <a href="https://github.com/sparker/promptlens" target="_blank">PromptLens</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Toggle test case expansion
+        function toggleTestCase(index) {
+            const testCase = document.getElementById(`test-${index}`);
+            testCase.classList.toggle('expanded');
+        }
+
+        // Create score distribution charts
+        const chartData = [{"average_score": 3.0, "name": "claude-sonnet-4-20250514", "result_count": 2, "score_distribution": {"1": 0, "2": 0, "3": 2, "4": 0, "5": 0}, "total_cost": 0.0, "total_latency": 35067.112583}];
+
+        chartData.forEach((model, index) => {
+            const ctx = document.getElementById(`chart-${index + 1}`);
+            if (!ctx) return;
+
+            const scores = [1, 2, 3, 4, 5];
+            const counts = scores.map(score => model.score_distribution[score] || 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Score 1', 'Score 2', 'Score 3', 'Score 4', 'Score 5'],
+                    datasets: [{
+                        label: 'Number of Responses',
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(248, 81, 73, 0.8)',
+                            'rgba(255, 149, 0, 0.8)',
+                            'rgba(255, 215, 0, 0.8)',
+                            'rgba(121, 192, 255, 0.8)',
+                            'rgba(63, 185, 80, 0.8)',
+                        ],
+                        borderColor: [
+                            '#f85149',
+                            '#ff9500',
+                            '#ffd700',
+                            '#79c0ff',
+                            '#3fb950',
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#2a3441'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // Staggered animation for test cases
+        document.addEventListener('DOMContentLoaded', () => {
+            const testCases = document.querySelectorAll('.test-case');
+            testCases.forEach((tc, i) => {
+                tc.style.animation = `fadeInUp 0.6s ease-out ${0.1 * i}s both`;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+# Baseline evaluation - no you.md profile
+# Tests model responses without personalization context
+
+golden_set: ./golden_set.yaml
+
+models:
+  - name: "Claude Sonnet (Baseline)"
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.7
+    max_tokens: 1024
+
+judge:
+  provider: anthropic
+  model: claude-sonnet-4-20250514
+  temperature: 0.3
+  criteria:
+    - "technical_accuracy"
+    - "appropriate_depth"
+    - "clarity"
+  custom_prompt: |
+    Evaluate the response based on these criteria:
+    - technical_accuracy: Is the response technically correct and complete?
+    - appropriate_depth: Is the depth appropriate for a general audience?
+    - clarity: Is the response clear and well-organized?
+
+    Score each criterion from 0-10 and provide brief justification.
+
+execution:
+  parallel_requests: 2
+  timeout: 60
+  retries: 2
+
+output:
+  directory: ./results/baseline
+  formats:
+    - html
+    - json

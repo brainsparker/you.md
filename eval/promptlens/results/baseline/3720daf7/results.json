@@ -1,0 +1,80 @@
+{
+  "run_id": "3720daf7",
+  "run_name": null,
+  "timestamp": "2026-01-13T22:22:48.442564",
+  "golden_set_name": "you.md Personalization Evaluation",
+  "models_tested": [
+    "claude-sonnet-4-20250514"
+  ],
+  "results": [
+    {
+      "test_case_id": "k8s-networking",
+      "query": "Explain how Kubernetes networking works",
+      "expected_behavior": "Response should be tailored to the user's expertise level.\nFor experts: Should include technical terms like CNI, kube-proxy, iptables, pod networking model.\nFor beginners: Should use analogies, avoid jargon, explain concepts simply.\nResponse depth should match the user's preference.\n",
+      "model_response": {
+        "content": "# Kubernetes Networking Overview\n\nKubernetes networking is built on several fundamental principles and components that work together to enable communication between pods, services, and external resources. Let me break this down systematically.\n\n## Core Networking Principles\n\nKubernetes follows these key networking rules:\n- **Every pod gets its own IP address** - no need for port mapping\n- **Pods can communicate with each other** without NAT across nodes\n- **Agents on nodes can communicate with all pods** on that node\n- **Flat network space** - all pods exist in the same network namespace\n\n## Key Networking Components\n\n### 1. Pod Networking\n\n```yaml\n# Each pod gets an IP from the cluster CIDR\napiVersion: v1\nkind: Pod\nmetadata:\n  name: my-pod\nspec:\n  containers:\n  - name: app\n    image: nginx\n    ports:\n    - containerPort: 80\n```\n\n- Pods within the same node share the node's network namespace\n- Containers in a pod share the same IP and can communicate via localhost\n- Pod IPs are ephemeral and change when pods are recreated\n\n### 2. Services\n\nServices provide stable networking for dynamic pod environments:\n\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: my-service\nspec:\n  selector:\n    app: my-app\n  ports:\n  - port: 80\n    targetPort: 8080\n  type: ClusterIP  # Default type\n```\n\n**Service Types:**\n- **ClusterIP**: Internal cluster communication only\n- **NodePort**: Exposes service on each node's IP at a static port\n- **LoadBalancer**: Provisions external load balancer (cloud provider)\n- **ExternalName**: Maps service to external DNS name\n\n### 3. Container Network Interface (CNI)\n\nCNI plugins handle the actual network implementation:\n\n**Popular CNI plugins:**\n- **Flannel**: Simple overlay network using VXLAN\n- **Calico**: Layer 3 networking with network policies\n- **Weave**: Mesh networking with encryption\n- **Cilium**: eBPF-based networking with advanced features\n\n## Network Flow Examples\n\n### Pod-to-Pod Communication (Same Node)\n```\nPod A (10.244.1.10) → Virtual Bridge → Pod B (10.244.1.11)\n```\n\n### Pod-to-Pod Communication (Different Nodes)\n```\nPod A (10.244.1.10) → Node 1 → Overlay Network → Node 2 → Pod B (10.244.2.10)\n```\n\n### Service Discovery\n```yaml\n# Service creates endpoints\napiVersion: v1\nkind: Service\nmetadata:\n  name: database\nspec:\n  selector:\n    app: db\n  ports:\n  - port: 5432\n\n---\n# Pods can reach service by name\napiVersion: v1\nkind: Pod\nspec:\n  containers:\n  - name: app\n    env:\n    - name: DB_HOST\n      value: \"database\"  # Resolves to service IP\n```\n\n## Advanced Networking Concepts\n\n### 1. Network Policies\n\nControl traffic flow between pods:\n\n```yaml\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: deny-all\nspec:\n  podSelector: {}\n  policyTypes:\n  - Ingress\n  - Egress\n  # This policy denies all traffic\n```\n\n### 2. Ingress Controllers\n\nManage external access to services:\n\n```yaml\napiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: my-ingress\nspec:\n  rules:\n  - host: myapp.example.com\n    http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend:\n          service:\n            name: my-service\n            port:\n              number: 80\n```\n\n## Network Architecture Layers\n\n```\n┌─────────────────────────────────────┐\n│           External Traffic          │\n├─────────────────────────────────────┤\n│      Ingress/Load Balancer         │\n├─────────────────────────────────────┤\n│           Services Layer            │\n├─────────────────────────────────────┤\n│            Pod Network              │\n├─────────────────",
+        "model": "claude-sonnet-4-20250514",
+        "provider": "anthropic",
+        "tokens_used": 1038,
+        "prompt_tokens": 14,
+        "completion_tokens": 1024,
+        "latency_ms": 16826.91225,
+        "cost_usd": 0.0,
+        "error": null,
+        "timestamp": "2026-01-13T22:22:44.123885",
+        "tool_calls": [],
+        "stop_reason": "max_tokens"
+      },
+      "judge_score": {
+        "score": 3,
+        "explanation": "[Score parsing failed, using default score of 3] Unable to parse explanation",
+        "criteria_scores": {},
+        "judge_model": "claude-sonnet-4-20250514",
+        "judge_provider": "anthropic",
+        "timestamp": "2026-01-13T22:22:46.996967",
+        "tool_evaluations": [],
+        "tool_usage_score": null,
+        "tool_efficiency_score": null
+      },
+      "timestamp": "2026-01-13T22:22:47.006616"
+    },
+    {
+      "test_case_id": "debug-slow-query",
+      "query": "How would you debug a slow database query?",
+      "expected_behavior": "Response should match the user's technical level.\nFor experts: Should mention EXPLAIN plans, query optimizer, index strategies, profiling tools.\nFor beginners: Should provide step-by-step guidance, explain what indexes are, suggest simple tools.\nResponse should be appropriately detailed based on preference.\n",
+      "model_response": {
+        "content": "Here's a systematic approach to debugging slow database queries:\n\n## 1. **Identify and Measure the Problem**\n\n```sql\n-- Enable query logging (MySQL example)\nSET long_query_time = 1;\nSET slow_query_log = ON;\n\n-- Check current running queries\nSHOW PROCESSLIST;\n\n-- Get query execution time\nSELECT SQL_NO_CACHE * FROM users WHERE email = 'user@example.com';\n```\n\n## 2. **Analyze the Query Execution Plan**\n\n```sql\n-- PostgreSQL\nEXPLAIN ANALYZE SELECT * FROM orders o \nJOIN customers c ON o.customer_id = c.id \nWHERE o.order_date > '2023-01-01';\n\n-- MySQL\nEXPLAIN FORMAT=JSON SELECT * FROM orders o \nJOIN customers c ON o.customer_id = c.id \nWHERE o.order_date > '2023-01-01';\n```\n\nLook for:\n- **Sequential scans** instead of index scans\n- **High cost operations**\n- **Large row estimates vs actual rows**\n- **Nested loops** on large datasets\n\n## 3. **Check and Optimize Indexes**\n\n```sql\n-- Identify missing indexes\nSELECT * FROM pg_stat_user_tables WHERE schemaname = 'public';\n\n-- Create appropriate indexes\nCREATE INDEX idx_orders_date ON orders(order_date);\nCREATE INDEX idx_orders_customer_date ON orders(customer_id, order_date);\n\n-- Check index usage\nSELECT schemaname, tablename, indexname, idx_scan, idx_tup_read \nFROM pg_stat_user_indexes;\n```\n\n## 4. **Query Structure Analysis**\n\n### Common Issues to Check:\n\n**Inefficient WHERE clauses:**\n```sql\n-- Bad: Function on indexed column\nSELECT * FROM users WHERE UPPER(email) = 'USER@EXAMPLE.COM';\n\n-- Good: Use functional index or modify query\nSELECT * FROM users WHERE email = 'user@example.com';\n```\n\n**N+1 Query Problems:**\n```sql\n-- Bad: Multiple queries\nSELECT * FROM posts;\n-- Then for each post: SELECT * FROM comments WHERE post_id = ?\n\n-- Good: Single join query\nSELECT p.*, c.* FROM posts p \nLEFT JOIN comments c ON p.id = c.post_id;\n```\n\n## 5. **Resource and System Checks**\n\n```sql\n-- Check database stats\nSELECT * FROM pg_stat_database WHERE datname = 'your_db';\n\n-- Monitor locks\nSELECT * FROM pg_locks WHERE NOT granted;\n\n-- Check buffer cache hit ratio\nSELECT \n  round(blks_hit*100/(blks_hit+blks_read), 2) AS cache_hit_ratio\nFROM pg_stat_database WHERE datname = 'your_db';\n```\n\n## 6. **Query Optimization Techniques**\n\n### Limit Result Sets:\n```sql\n-- Add appropriate LIMIT\nSELECT * FROM large_table ORDER BY created_at DESC LIMIT 100;\n\n-- Use pagination instead of OFFSET for large datasets\nSELECT * FROM posts WHERE id > 1000 ORDER BY id LIMIT 20;\n```\n\n### Optimize JOINs:\n```sql\n-- Ensure JOIN conditions use indexed columns\n-- Consider JOIN order for better performance\nSELECT c.name, COUNT(o.id) as order_count\nFROM customers c\nLEFT JOIN orders o ON c.id = o.customer_id\nWHERE c.created_at > '2023-01-01'\nGROUP BY c.id, c.name;\n```\n\n## 7. **Database Configuration Tuning**\n\n```sql\n-- PostgreSQL example configurations\n-- postgresql.conf adjustments:\nshared_buffers = 256MB\nwork_mem = 4MB\nmaintenance_work_mem = 64MB\neffective_cache_size = 1GB\nrandom_page_cost = 1.1\n```\n\n## 8. **Monitoring and Tools**\n\nUse database-specific tools:\n- **PostgreSQL**: pg_stat_statements, pgBadger\n- **MySQL**: Performance Schema, MySQL Workbench\n- **Application-level**: Query profilers, APM tools\n\n## 9. **Testing and Validation**\n\n```sql\n-- Before optimization\n\\timing\nSELECT COUNT(*) FROM slow_query_here;\n\n-- After optimization  \nSELECT COUNT(*) FROM optimized_query_here;\n\n-- Compare execution plans",
+        "model": "claude-sonnet-4-20250514",
+        "provider": "anthropic",
+        "tokens_used": 1040,
+        "prompt_tokens": 16,
+        "completion_tokens": 1024,
+        "latency_ms": 18240.200333,
+        "cost_usd": 0.0,
+        "error": null,
+        "timestamp": "2026-01-13T22:22:45.539900",
+        "tool_calls": [],
+        "stop_reason": "max_tokens"
+      },
+      "judge_score": {
+        "score": 3,
+        "explanation": "[Score parsing failed, using default score of 3] Unable to parse explanation",
+        "criteria_scores": {},
+        "judge_model": "claude-sonnet-4-20250514",
+        "judge_provider": "anthropic",
+        "timestamp": "2026-01-13T22:22:48.436434",
+        "tool_evaluations": [],
+        "tool_usage_score": null,
+        "tool_efficiency_score": null
+      },
+      "timestamp": "2026-01-13T22:22:48.436502"
+    }
+  ],
+  "total_cost_usd": 0.0,
+  "total_time_ms": 35067.112583,
+  "metadata": {
+    "golden_set_path": "./golden_set.yaml",
+    "test_case_count": 4,
+    "provider_count": 1
+  }
+}

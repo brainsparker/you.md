@@ -1,0 +1,74 @@
+{
+  "queries": [
+    {
+      "id": "k8s-networking",
+      "query": "kubernetes networking",
+      "expert_expected": {
+        "good_sources": ["kubernetes.io", "github.com", "arxiv.org"],
+        "good_terms": ["CNI", "service mesh", "network policies", "ingress controller"],
+        "bad_sources": ["medium.com/beginners-guide", "youtube.com"]
+      },
+      "beginner_expected": {
+        "good_sources": ["medium.com", "dev.to", "youtube.com", "freecodecamp.org"],
+        "good_terms": ["tutorial", "introduction", "basics", "getting started"],
+        "bad_sources": ["arxiv.org"]
+      }
+    },
+    {
+      "id": "react-hooks",
+      "query": "react hooks",
+      "expert_expected": {
+        "good_sources": ["react.dev", "github.com/facebook/react"],
+        "good_terms": ["custom hooks", "useCallback", "useMemo", "performance", "internals"],
+        "bad_sources": ["w3schools.com"]
+      },
+      "beginner_expected": {
+        "good_sources": ["react.dev", "freecodecamp.org", "youtube.com"],
+        "good_terms": ["tutorial", "useState", "useEffect", "example", "beginner"],
+        "bad_sources": []
+      }
+    },
+    {
+      "id": "database-scaling",
+      "query": "database scaling",
+      "expert_expected": {
+        "good_sources": ["postgresql.org", "github.com", "highscalability.com"],
+        "good_terms": ["sharding", "replication", "partitioning", "CAP theorem", "consistency"],
+        "bad_sources": ["medium.com/what-is-a-database"]
+      },
+      "beginner_expected": {
+        "good_sources": ["digitalocean.com", "dev.to", "youtube.com"],
+        "good_terms": ["introduction", "basics", "when to scale", "vertical vs horizontal"],
+        "bad_sources": []
+      }
+    },
+    {
+      "id": "machine-learning-optimization",
+      "query": "machine learning optimization",
+      "expert_expected": {
+        "good_sources": ["arxiv.org", "papers.nips.cc", "github.com"],
+        "good_terms": ["gradient descent", "Adam", "learning rate scheduling", "convergence"],
+        "bad_sources": ["towardsdatascience.com/ml-for-beginners"]
+      },
+      "beginner_expected": {
+        "good_sources": ["towardsdatascience.com", "kaggle.com", "youtube.com"],
+        "good_terms": ["tutorial", "introduction", "basics", "explained"],
+        "bad_sources": ["arxiv.org"]
+      }
+    },
+    {
+      "id": "api-authentication",
+      "query": "API authentication",
+      "expert_expected": {
+        "good_sources": ["oauth.net", "auth0.com/docs", "ietf.org"],
+        "good_terms": ["OAuth 2.0", "JWT", "PKCE", "refresh tokens", "security considerations"],
+        "bad_sources": []
+      },
+      "beginner_expected": {
+        "good_sources": ["auth0.com/blog", "dev.to", "youtube.com"],
+        "good_terms": ["tutorial", "how to", "simple", "getting started"],
+        "bad_sources": ["ietf.org/rfc"]
+      }
+    }
+  ]
+}

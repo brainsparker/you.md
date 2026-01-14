@@ -1,0 +1,43 @@
+name: "you.md Personalization Evaluation"
+description: "Tests whether you.md profile context improves AI response personalization"
+
+test_cases:
+  - id: "k8s-networking"
+    query: "Explain how Kubernetes networking works"
+    expected_behavior: |
+      Response should be tailored to the user's expertise level.
+      For experts: Should include technical terms like CNI, kube-proxy, iptables, pod networking model.
+      For beginners: Should use analogies, avoid jargon, explain concepts simply.
+      Response depth should match the user's preference.
+    category: "devops"
+    tags: ["kubernetes", "networking", "technical"]
+
+  - id: "debug-slow-query"
+    query: "How would you debug a slow database query?"
+    expected_behavior: |
+      Response should match the user's technical level.
+      For experts: Should mention EXPLAIN plans, query optimizer, index strategies, profiling tools.
+      For beginners: Should provide step-by-step guidance, explain what indexes are, suggest simple tools.
+      Response should be appropriately detailed based on preference.
+    category: "databases"
+    tags: ["debugging", "performance", "sql"]
+
+  - id: "react-state-management"
+    query: "What are the options for state management in React?"
+    expected_behavior: |
+      Response should be calibrated to expertise level.
+      For experts: Should discuss trade-offs, compare Redux/Zustand/Recoil/Jotai, mention server state (React Query).
+      For beginners: Should start with useState, explain props, introduce Context gently.
+      Should include examples appropriate to skill level.
+    category: "frontend"
+    tags: ["react", "javascript", "state"]
+
+  - id: "api-security"
+    query: "What security measures should I implement for a REST API?"
+    expected_behavior: |
+      Response should reflect user's security expertise.
+      For experts: Should discuss OAuth 2.0 flows, JWT best practices, rate limiting strategies, CORS configuration.
+      For beginners: Should emphasize HTTPS, basic authentication concepts, input validation basics.
+      Depth of security topics should match stated preference.
+    category: "security"
+    tags: ["api", "security", "backend"]
