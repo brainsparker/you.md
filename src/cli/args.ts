@@ -8,6 +8,7 @@ export type Command =
   | "validate"
   | "merge"
   | "convert"
+  | "skill"
   | "help"
   | "version";
 
@@ -127,7 +128,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
  * Check if a string is a valid command
  */
 function isValidCommand(cmd: string): cmd is Command {
-  return ["init", "validate", "merge", "convert", "help", "version"].includes(
+  return ["init", "validate", "merge", "convert", "skill", "help", "version"].includes(
     cmd
   );
 }
@@ -142,6 +143,7 @@ you-md - Parser and CLI for you.md personal AI context files
 Usage: you-md <command> [options] [arguments]
 
 Commands:
+  skill <subcommand>       Install/manage the you.md skill in your AI tools
   init [path]              Create a new you.md file (default: ./.you.md)
   validate <path>          Validate a you.md file
   merge <paths...>         Merge multiple you.md files
@@ -161,6 +163,8 @@ Options:
   --json                   Output as JSON
 
 Examples:
+  you-md skill install                     Install into all detected AI tools
+  you-md skill status                      Check which tools have the skill
   you-md init -i                           Interactive wizard (easiest!)
   you-md init                              Create .you.md (identity template)
   you-md init ~/.you.md                    Create global you.md

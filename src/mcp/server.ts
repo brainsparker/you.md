@@ -212,6 +212,31 @@ export async function createMcpServer(): Promise<Server> {
             properties: {},
           },
         },
+        {
+          name: "youmd_summarize",
+          description:
+            "Get a one-paragraph summary of who the user is and how they like to work — useful for quick context injection at the start of a session",
+          inputSchema: {
+            type: "object" as const,
+            properties: {},
+          },
+        },
+        {
+          name: "youmd_tool_config",
+          description:
+            "Generate a tool-specific configuration snippet (e.g. Cursor rules, Claude system prompt fragment) from the user's you.md preferences",
+          inputSchema: {
+            type: "object" as const,
+            properties: {
+              tool: {
+                type: "string",
+                description: "Target tool: cursor | claude | windsurf | generic",
+                enum: ["cursor", "claude", "windsurf", "generic"],
+              },
+            },
+            required: ["tool"],
+          },
+        },
       ],
     };
   });
@@ -328,6 +353,59 @@ export async function createMcpServer(): Promise<Server> {
       };
     }
 
+    if (name === "youmd_summarize") {
+      const result = await parser.discover()
+
+      if (!result || !result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "No you.md file found. Run `you-md init -i` to create one, or `you-md skill install` to set up the skill.",
+            },
+          ],
+        }
+      }
+
+      const summary = buildSummary(result.profile)
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: summary,
+          },
+        ],
+      }
+    }
+
+    if (name === "youmd_tool_config") {
+      const tool = (args?.tool as string) || "generic"
+      const result = await parser.discover()
+
+      if (!result || !result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "No you.md file found. Run `you-md init -i` to create one.",
+            },
+          ],
+        }
+      }
+
+      const config = buildToolConfig(result.profile, tool)
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: config,
+          },
+        ],
+      }
+    }
+
     throw new Error(`Unknown tool: ${name}`);
   });
 
@@ -369,6 +447,57 @@ function formatPreferencesForContext(profile: {
   }
 
   return lines.join("\n");
+}
+
+type Profile = Parameters<typeof formatPreferencesForContext>[0]
+
+/**
+ * Build a concise one-paragraph summary of the user for quick context injection
+ */
+function buildSummary(profile: Profile): string {
+  const lines: string[] = []
+
+  if (profile.metadata.author) {
+    lines.push(`This session is with ${profile.metadata.author}.`)
+  }
+
+  const sectionTexts: string[] = []
+  for (const [, section] of profile.sections) {
+    if (section.content?.trim()) {
+      sectionTexts.push(`${section.title}: ${section.content.trim().slice(0, 120)}`)
+    }
+  }
+
+  if (sectionTexts.length > 0) {
+    lines.push(sectionTexts.slice(0, 4).join(". ") + ".")
+  }
+
+  if (lines.length === 0) {
+    return "User preferences are defined in you.md but no summary could be generated. Use youmd_get_preferences for full details."
+  }
+
+  return lines.join(" ")
+}
+
+/**
+ * Generate a tool-specific configuration snippet from the user's profile
+ */
+function buildToolConfig(profile: Profile, tool: string): string {
+  const prefs = formatPreferencesForContext(profile)
+
+  switch (tool) {
+    case "cursor":
+      return `# .cursorrules — generated from you.md\n# Do not edit manually; regenerate with: you-md skill install\n\n${prefs}`
+
+    case "claude":
+      return `<user_preferences>\nThe following preferences are from the user's you.md file. Apply them throughout this session.\n\n${prefs}\n</user_preferences>`
+
+    case "windsurf":
+      return `# Windsurf rules — generated from you.md\n\n${prefs}`
+
+    default:
+      return `# AI tool preferences — generated from you.md\n# Install the skill in your tools with: you-md skill install\n\n${prefs}`
+  }
 }
 
 /**

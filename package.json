@@ -1,7 +1,7 @@
 {
   "name": "you-md",
   "version": "0.2.0",
-  "description": "Parser library and CLI for you.md personal AI context files",
+  "description": "A skill that makes every AI tool know you — portable preferences and context across Claude Code, Cursor, Windsurf, and more",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -38,19 +38,18 @@
     "eval": "npm run eval:search && npm run eval:agent"
   },
   "keywords": [
-    "you.md",
-    "youmd",
-    "markdown",
-    "yaml",
-    "frontmatter",
     "ai",
-    "context",
-    "parser",
-    "cli",
-    "preferences",
     "mcp",
-    "model-context-protocol",
-    "claude"
+    "cursor",
+    "claude",
+    "claude-code",
+    "windsurf",
+    "preferences",
+    "context",
+    "skill",
+    "developer-tools",
+    "ai-tools",
+    "you.md"
   ],
   "author": "sparker",
   "license": "MIT",

@@ -1,22 +1,69 @@
-# you-md
+# you.md
 
-Parser library and CLI for you.md - your portable AI identity.
+**A skill that makes every AI tool know you.**
 
-**Own your AI identity. Stop being a stranger.**
+Every AI coding tool you open starts from zero. It doesn't know you prefer TypeScript, hate verbose comments, or always name variables in camelCase. You re-explain yourself every session, every tool, every project.
 
-The you.md standard provides a portable way to define who you are to AI systems. Create your profile once, use it everywhere - across search engines, AI assistants, and any tool that supports the format.
-
-## Installation
+you.md fixes that. Define yourself once in a simple markdown file. Install the skill. Every AI tool you use — Cursor, Claude Code, Windsurf, and more — now knows exactly who you are and how you work.
 
 ```bash
-npm install you-md
+# Install the skill into all your AI tools in one command
+npx you-md skill install
 ```
+
+That's it. No manual JSON editing. No per-tool setup. The skill auto-detects every supported tool you have installed and wires itself in.
+
+---
 
 ## Quick Start
 
-### MCP Server (Recommended for Claude Code)
+### 1. Create your you.md profile
 
-Add to your Claude Code MCP settings (`~/.claude/claude_desktop_config.json`):
+```bash
+npx you-md init -i    # Interactive wizard (recommended)
+```
+
+### 2. Install the skill
+
+```bash
+npx you-md skill install
+```
+
+This auto-detects and configures: **Claude Code**, **Claude Desktop**, **Cursor**, and **Windsurf**.
+
+Restart your AI tools. They now know you.
+
+### 3. Check your status
+
+```bash
+npx you-md skill status
+```
+
+---
+
+## What the skill does
+
+Once installed, every supported AI tool gets access to:
+
+- Your coding language and framework preferences
+- Your naming conventions and code style
+- Your communication preferences (concise vs. verbose, emoji use, etc.)
+- Your role and professional context
+- Project-level overrides (`.you.md` in your project root overrides `~/.you.md`)
+
+The skill works via [MCP (Model Context Protocol)](https://modelcontextprotocol.io) and exposes three tools your AI can call:
+
+| Tool | What it does |
+|---|---|
+| `youmd_get_preferences` | Returns your full preferences for context injection |
+| `youmd_summarize` | One-paragraph summary of who you are — fast context for new sessions |
+| `youmd_tool_config` | Generates tool-specific config (Cursor rules, Claude instructions) from your profile |
+
+---
+
+## Manual installation (advanced)
+
+If you prefer to configure tools manually, add this to your tool's MCP config:
 
 ```json
 {
@@ -29,35 +76,25 @@ Add to your Claude Code MCP settings (`~/.claude/claude_desktop_config.json`):
 }
 ```
 
-Or install globally first (`npm install -g you-md`), then:
+Config file locations:
+- **Claude Code:** `~/.claude/claude_desktop_config.json`
+- **Claude Desktop (macOS):** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Cursor:** `~/.cursor/mcp.json`
+- **Windsurf:** `~/.codeium/windsurf/mcp_config.json`
 
-```json
-{
-  "mcpServers": {
-    "you-md": {
-      "command": "you-md-mcp"
-    }
-  }
-}
-```
+---
 
-Then create your preferences file:
+## CLI Reference
 
 ```bash
-npx you-md init -i ~/.you.md   # Interactive wizard (recommended)
-# or
-npx you-md init ~/.you.md      # Template-based
-```
+# Skill management
+you-md skill install              Install into all detected AI tools
+you-md skill install cursor       Install into a specific tool only
+you-md skill status               Show which tools have the skill active
+you-md skill uninstall            Remove from all tools
 
-The MCP server provides:
-- **Resources:** Access your preferences via `youmd://preferences`
-- **Tools:** `youmd_init`, `youmd_validate`, `youmd_get_preferences`
-
-### CLI Usage
-
-```bash
-# Easiest: Interactive wizard
-you-md init -i
+# Profile management
+you-md init -i                    Interactive wizard (recommended)
 
 # Create a new you.md file
 you-md init

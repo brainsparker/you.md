@@ -3,6 +3,7 @@ import { initCommand } from "./commands/init";
 import { validateCommand } from "./commands/validate";
 import { mergeCommand } from "./commands/merge";
 import { convertCommand } from "./commands/convert";
+import { skillCommand } from "./commands/skill";
 
 /**
  * Main CLI entry point
@@ -27,6 +28,10 @@ export async function main(): Promise<void> {
 
     case "convert":
       exitCode = await convertCommand(args.args, args.flags);
+      break;
+
+    case "skill":
+      exitCode = await skillCommand(args.args, args.flags);
       break;
 
     case "version":
