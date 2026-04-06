@@ -115,17 +115,6 @@ export async function writeJsonConfig(path: string, data: Record<string, unknown
   await rename(tmp, path)
 }
 
-function getNestedObj(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
-  let cur: unknown = obj
-  for (const k of keys.slice(0, -1)) {
-    if (typeof cur !== "object" || cur === null) return {}
-    if (!(k in (cur as Record<string, unknown>))) {
-      (cur as Record<string, unknown>)[k] = {}
-    }
-    cur = (cur as Record<string, unknown>)[k]
-  }
-  return (cur ?? {}) as Record<string, unknown>
-}
 
 function hasYouMdInstalled(config: Record<string, unknown>, tool: ToolDef): boolean {
   let cur: unknown = config
@@ -191,7 +180,7 @@ async function uninstallFromTool(tool: ToolDef): Promise<"removed" | "not-found"
 // Subcommands
 // ---------------------------------------------------------------------------
 
-async function installSkill(target: string | undefined, flags: CliFlags): Promise<number> {
+async function installSkill(target: string | undefined, _flags: CliFlags): Promise<number> {
   const targets = target
     ? TOOLS.filter(t => t.id === target)
     : TOOLS.filter(t => isToolDetected(t))

@@ -231,7 +231,7 @@ export async function runCheck(options?: CheckOptions): Promise<CheckResult> {
 // CLI entry point
 // ---------------------------------------------------------------------------
 
-export async function checkCommand(args: string[], flags: CliFlags): Promise<number> {
+export async function checkCommand(_args: string[], _flags: CliFlags): Promise<number> {
   const result = await runCheck();
   return result.profileValid ? 0 : 1;
 }

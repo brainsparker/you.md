@@ -139,6 +139,7 @@ export type ParseErrorCode =
   | "MISSING_SCHEMA_VERSION"
   | "NETWORK_ERROR"
   | "TIMEOUT"
+  | "PARSE_TIMEOUT"
   | "PERMISSION_DENIED";
 
 /**
