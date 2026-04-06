@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isPathSafe } from "../../src/mcp/server.js";
+import { isPathSafe, createMcpServer } from "../../src/mcp/server.js";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 
@@ -28,5 +28,12 @@ describe("MCP path validation", () => {
 
   it("rejects directory traversal", () => {
     expect(isPathSafe(resolve(homedir(), "..", "etc", "passwd"))).toBe(false);
+  });
+});
+
+describe("MCP server", () => {
+  it("creates server without throwing", async () => {
+    const server = await createMcpServer();
+    expect(server).toBeDefined();
   });
 });
