@@ -158,24 +158,39 @@ export function generateFromAnswers(answers: WizardAnswers): string {
     .map(s => sourceLabels[s] || s)
     .join(", ");
 
-  // Map numeric preferences
-  const depthMap: Record<string, number> = {
-    quick: 0.3,
-    moderate: 0.5,
-    deep: 0.8,
+  // Map searchDepth to readable label
+  const depthLabel: Record<string, string> = {
+    quick: "quick answers",
+    moderate: "balanced",
+    deep: "long-form analysis",
   };
 
-  const freshnessMap: Record<string, number> = {
-    fresh: 0.8,
-    balanced: 0.5,
-    authoritative: 0.2,
+  // Map visualPreference to readable label
+  const visualLabel: Record<string, string> = {
+    low: "minimal",
+    moderate: "some, when helpful",
+    high: "yes, prefer visual content",
   };
 
-  const visualMap: Record<string, number> = {
-    low: 0.2,
-    moderate: 0.5,
-    high: 0.8,
+  // Map freshnessVsAuthority to readable label
+  const freshnessLabel: Record<string, string> = {
+    fresh: "prefer recent over established",
+    balanced: "mix of new and established",
+    authoritative: "prefer established, authoritative",
   };
+
+  const depth = depthLabel[answers.searchDepth] || "balanced";
+  const visual = visualLabel[answers.visualPreference] || "minimal";
+  const freshness = freshnessLabel[answers.freshnessVsAuthority] || "mix of new and established";
+  const explanations = answers.expertise === "expert" ? "only when asked" : "when helpful";
+
+  const dontItems: string[] = [];
+  if (answers.expertise === "expert" || answers.expertise === "advanced") {
+    dontItems.push("- Over-explain things I already know");
+  }
+  if (answers.verbosity === "concise") {
+    dontItems.push("- Use excessive caveats or hedging");
+  }
 
   return `---
 schema_version: "${CURRENT_SCHEMA_VERSION}"
@@ -185,27 +200,23 @@ privacy_level: "private"
 
 # Me
 
-## Search Behavior
+## How I Think
+Expertise: ${answers.expertise}
+Depth preference: ${depth}
+Freshness preference: ${freshness}
 
-topics: [${topics.map(t => `"${t}"`).join(", ")}]
-search_depth: ${answers.searchDepth}
-expertise_level: ${answers.expertise}
+## How I Communicate
+Verbosity: ${answers.verbosity}
+Tone: direct
+Explanations: ${explanations}
 
-## Content Preferences
+## What I Trust
+Trusted sources: ${sources}
+Fact-checking: ${answers.factChecking}
 
-preferred_sources: [${answers.preferredSources.map(s => `"${s}"`).join(", ")}]
-freshness_weight: ${freshnessMap[answers.freshnessVsAuthority] || 0.5}
-visual_preference: ${visualMap[answers.visualPreference] || 0.2}
-long_form_preference: ${depthMap[answers.searchDepth] || 0.5}
-
-## Trust and Safety
-
-misinformation_sensitivity: ${answers.factChecking === "strict" ? "high" : answers.factChecking}
-fact_check_preference: ${answers.factChecking === "strict" ? "inline" : "subtle"}
-
-## AI Response Preferences
-
-verbosity: ${answers.verbosity === "moderate" ? "concise" : answers.verbosity}
-explanation_depth: ${answers.expertise === "beginner" ? "detailed" : answers.expertise === "expert" ? "minimal" : "moderate"}
-`;
+## What I'm Into
+Topics: ${topics.join(", ")}
+Content depth: ${depth}
+Visual content: ${visual}
+${dontItems.length > 0 ? `\n## Don't\n${dontItems.join("\n")}\n` : ""}`;
 }
