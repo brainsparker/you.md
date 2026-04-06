@@ -1,8 +1,8 @@
 # you.md
 
-**A skill that makes every AI tool know you.**
+**Who you are. What you've lived. What you're becoming.**
 
-Every AI coding tool you open starts from zero. It doesn't know you prefer TypeScript, hate verbose comments, or always name variables in camelCase. You re-explain yourself every session, every tool, every project.
+Every AI tool you open starts from zero. It doesn't know how you think, what you've built, or where you're headed. You re-explain yourself every session, every tool, every project.
 
 you.md fixes that. Define yourself once in a simple markdown file. Install the skill. Every AI tool you use — Cursor, Claude Code, Windsurf, and more — now knows exactly who you are and how you work.
 
@@ -191,6 +191,12 @@ Source quality: high
 Topics: distributed systems, machine learning
 Content depth: long-form analysis
 Visual content: minimal
+
+## Where I'm Headed
+
+Currently exploring: Rust for systems programming
+Building toward: distributed systems consultancy
+Learning: category theory, formal verification
 
 ## Context
 
