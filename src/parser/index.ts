@@ -58,6 +58,10 @@ export class YouMdParserImpl implements YouMdParser {
       };
     }
 
+    // Capture start time for timeout enforcement
+    const maxParseTime = options?.maxParseTime;
+    const parseStart = maxParseTime !== undefined ? Date.now() : 0;
+
     // Extract frontmatter
     const frontmatterResult = extractFrontmatter(content);
 
@@ -67,6 +71,15 @@ export class YouMdParserImpl implements YouMdParser {
         message: "No YAML frontmatter found",
         line: 1,
       });
+    }
+
+    // Check timeout after frontmatter extraction
+    if (maxParseTime !== undefined && Date.now() - parseStart >= maxParseTime) {
+      errors.push({
+        code: "PARSE_TIMEOUT",
+        message: `Parse exceeded timeout of ${maxParseTime}ms`,
+      });
+      return { profile: createEmptyProfile(), success: false, errors, warnings };
     }
 
     // Parse YAML frontmatter
@@ -93,6 +106,15 @@ export class YouMdParserImpl implements YouMdParser {
           yamlResult.data.schema_version || yamlResult.data.schemaVersion
         );
       }
+    }
+
+    // Check timeout after YAML parsing
+    if (maxParseTime !== undefined && Date.now() - parseStart >= maxParseTime) {
+      errors.push({
+        code: "PARSE_TIMEOUT",
+        message: `Parse exceeded timeout of ${maxParseTime}ms`,
+      });
+      return { profile: createEmptyProfile(), success: false, errors, warnings };
     }
 
     // Check for schema version
