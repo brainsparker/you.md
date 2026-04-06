@@ -1,3 +1,5 @@
+import { CURRENT_SCHEMA_VERSION } from "../../utils/constants.js";
+
 /**
  * Human-centric identity template (v1.1 default)
  * For general audience - focuses on AI identity, not coding
@@ -6,7 +8,7 @@ export function getIdentityTemplate(): string {
   const today = new Date().toISOString().split("T")[0];
 
   return `---
-schema_version: "1.1"
+schema_version: "${CURRENT_SCHEMA_VERSION}"
 created: "${today}"
 last_updated: "${today}"
 privacy_level: "private"
@@ -75,7 +77,7 @@ export function getDeveloperTemplate(): string {
   const today = new Date().toISOString().split("T")[0];
 
   return `---
-schema_version: "1.0"
+schema_version: "${CURRENT_SCHEMA_VERSION}"
 created: "${today}"
 last_updated: "${today}"
 privacy_level: "private"
@@ -158,7 +160,7 @@ export function getMinimalTemplate(): string {
   const today = new Date().toISOString().split("T")[0];
 
   return `---
-schema_version: "1.0"
+schema_version: "${CURRENT_SCHEMA_VERSION}"
 created: "${today}"
 privacy_level: "private"
 ---
@@ -185,7 +187,7 @@ export function getPersonalizationTemplate(): string {
   const timestamp = new Date().toISOString();
 
   return `---
-schema_version: "1.0"
+schema_version: "${CURRENT_SCHEMA_VERSION}"
 profile_type: "personalization"
 created: "${today}"
 last_updated: "${today}"

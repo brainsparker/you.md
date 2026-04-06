@@ -4,6 +4,7 @@ import { validateCommand } from "./commands/validate";
 import { mergeCommand } from "./commands/merge";
 import { convertCommand } from "./commands/convert";
 import { skillCommand } from "./commands/skill";
+import { checkCommand } from "./commands/check";
 
 /**
  * Main CLI entry point
@@ -32,6 +33,10 @@ export async function main(): Promise<void> {
 
     case "skill":
       exitCode = await skillCommand(args.args, args.flags);
+      break;
+
+    case "check":
+      exitCode = await checkCommand(args.args, args.flags);
       break;
 
     case "version":

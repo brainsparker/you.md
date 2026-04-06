@@ -9,6 +9,7 @@ export type Command =
   | "merge"
   | "convert"
   | "skill"
+  | "check"
   | "help"
   | "version";
 
@@ -128,7 +129,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
  * Check if a string is a valid command
  */
 function isValidCommand(cmd: string): cmd is Command {
-  return ["init", "validate", "merge", "convert", "skill", "help", "version"].includes(
+  return ["init", "validate", "merge", "convert", "skill", "check", "help", "version"].includes(
     cmd
   );
 }
@@ -144,6 +145,7 @@ Usage: you-md <command> [options] [arguments]
 
 Commands:
   skill <subcommand>       Install/manage the you.md skill in your AI tools
+  check                    Verify your profile and tool installations
   init [path]              Create a new you.md file (default: ./.you.md)
   validate <path>          Validate a you.md file
   merge <paths...>         Merge multiple you.md files
