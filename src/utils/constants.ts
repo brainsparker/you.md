@@ -65,6 +65,10 @@ export const KNOWN_SECTIONS = [
   "what i'm into",
   "what im into",
   "context",
+  "how i work",
+  "where i'm headed",
+  "where im headed",
+  "boundaries",
   // Original you.md sections
   "about me",
   "about",

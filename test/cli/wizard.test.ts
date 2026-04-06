@@ -99,9 +99,9 @@ describe("generateFromAnswers", () => {
     expect(beginner).toContain("Explanations: when helpful");
   });
 
-  it("includes Don't section for expert with concise verbosity", () => {
+  it("includes Boundaries section for expert with concise verbosity", () => {
     const output = generateFromAnswers(sampleAnswers);
-    expect(output).toContain("## Don't");
+    expect(output).toContain("## Boundaries");
     expect(output).toContain("- Over-explain things I already know");
     expect(output).toContain("- Use excessive caveats or hedging");
   });

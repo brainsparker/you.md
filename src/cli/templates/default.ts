@@ -54,7 +54,7 @@ Language: en-US
 Timezone:
 Accessibility:
 
-## Don't
+## Boundaries
 
 <!-- Things you want AI to avoid -->
 - Over-explain things I already know
@@ -142,7 +142,7 @@ Test files:
 Documentation:
 API specs:
 
-## Don't
+## Boundaries
 
 <!-- Things you don't want AI assistants to do -->
 

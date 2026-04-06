@@ -184,12 +184,12 @@ export function generateFromAnswers(answers: WizardAnswers): string {
   const freshness = freshnessLabel[answers.freshnessVsAuthority] || "mix of new and established";
   const explanations = answers.expertise === "expert" ? "only when asked" : "when helpful";
 
-  const dontItems: string[] = [];
+  const boundaryItems: string[] = [];
   if (answers.expertise === "expert" || answers.expertise === "advanced") {
-    dontItems.push("- Over-explain things I already know");
+    boundaryItems.push("- Over-explain things I already know");
   }
   if (answers.verbosity === "concise") {
-    dontItems.push("- Use excessive caveats or hedging");
+    boundaryItems.push("- Use excessive caveats or hedging");
   }
 
   return `---
@@ -218,5 +218,5 @@ Fact-checking: ${answers.factChecking}
 Topics: ${topics.join(", ")}
 Content depth: ${depth}
 Visual content: ${visual}
-${dontItems.length > 0 ? `\n## Don't\n${dontItems.join("\n")}\n` : ""}`;
+${boundaryItems.length > 0 ? `\n## Boundaries\n${boundaryItems.join("\n")}\n` : ""}`;
 }
