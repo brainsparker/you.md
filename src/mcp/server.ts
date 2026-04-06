@@ -17,6 +17,22 @@ import { homedir } from "node:os";
 const parser = createParser();
 
 /**
+ * Check whether a target path is inside the user's home directory or cwd.
+ * Rejects writes to arbitrary system locations (e.g. /etc, /tmp).
+ */
+export function isPathSafe(targetPath: string): boolean {
+  const resolved = resolve(targetPath);
+  const home = homedir();
+  const cwd = process.cwd();
+  return (
+    resolved.startsWith(home + "/") ||
+    resolved === home ||
+    resolved.startsWith(cwd + "/") ||
+    resolved === cwd
+  );
+}
+
+/**
  * Create and run the MCP server for you-md
  */
 export async function createMcpServer(): Promise<Server> {
@@ -248,6 +264,17 @@ export async function createMcpServer(): Promise<Server> {
     if (name === "youmd_init") {
       const path = (args?.path as string) || resolve(homedir(), ".you.md");
       const force = args?.force as boolean;
+
+      if (!isPathSafe(path)) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Refused: path "${path}" is outside your home directory and current working directory. Provide a path under ~ or the project root.`,
+            },
+          ],
+        };
+      }
 
       if (existsSync(path) && !force) {
         return {
