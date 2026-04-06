@@ -14,7 +14,7 @@
  *   windsurf        Windsurf (~/.codeium/windsurf/mcp_config.json)
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises"
+import { readFile, writeFile, mkdir, rename, copyFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { resolve, dirname } from "node:path"
 import { homedir, platform } from "node:os"
@@ -99,19 +99,20 @@ function isToolDetected(tool: ToolDef): boolean {
   return tool.installHints.some(p => existsSync(p))
 }
 
-async function readJsonConfig(path: string): Promise<Record<string, unknown>> {
+export async function readJsonConfig(path: string): Promise<Record<string, unknown>> {
   if (!existsSync(path)) return {}
-  try {
-    const raw = await readFile(path, "utf-8")
-    return JSON.parse(raw) as Record<string, unknown>
-  } catch {
-    return {}
-  }
+  const raw = await readFile(path, "utf-8")
+  return JSON.parse(raw) as Record<string, unknown>
 }
 
-async function writeJsonConfig(path: string, data: Record<string, unknown>): Promise<void> {
+export async function writeJsonConfig(path: string, data: Record<string, unknown>): Promise<void> {
   await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, JSON.stringify(data, null, 2) + "\n", "utf-8")
+  if (existsSync(path)) {
+    await copyFile(path, path + ".backup")
+  }
+  const tmp = path + ".tmp"
+  await writeFile(tmp, JSON.stringify(data, null, 2) + "\n", "utf-8")
+  await rename(tmp, path)
 }
 
 function getNestedObj(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
@@ -139,21 +140,26 @@ function hasYouMdInstalled(config: Record<string, unknown>, tool: ToolDef): bool
 async function installIntoTool(tool: ToolDef): Promise<"installed" | "already" | "error"> {
   try {
     const config = await readJsonConfig(tool.configPath)
-    if (hasYouMdInstalled(config, tool.mcpKey)) return "already"
+    if (hasYouMdInstalled(config, tool)) return "already"
 
     // Navigate/create the nested key path and inject
     let cur: Record<string, unknown> = config
     for (const k of tool.mcpKey.slice(0, -1)) {
       if (!(k in cur)) cur[k] = {}
+      if (typeof cur[k] !== "object" || cur[k] === null) cur[k] = {}
       cur = cur[k] as Record<string, unknown>
     }
     const finalKey = tool.mcpKey[tool.mcpKey.length - 1]
-    if (!(finalKey in cur)) cur[finalKey] = {}
+    if (!(finalKey in cur) || typeof cur[finalKey] !== "object" || cur[finalKey] === null) cur[finalKey] = {}
     ;(cur[finalKey] as Record<string, unknown>)["you-md"] = MCP_ENTRY
 
     await writeJsonConfig(tool.configPath, config)
     return "installed"
-  } catch {
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      console.error(`✗ ${tool.name} — config file has corrupt JSON: ${tool.configPath}`)
+      console.error(`  Fix the JSON manually or delete the file and retry.`)
+    }
     return "error"
   }
 }
@@ -162,7 +168,7 @@ async function uninstallFromTool(tool: ToolDef): Promise<"removed" | "not-found"
   try {
     if (!existsSync(tool.configPath)) return "not-found"
     const config = await readJsonConfig(tool.configPath)
-    if (!hasYouMdInstalled(config, tool.mcpKey)) return "not-found"
+    if (!hasYouMdInstalled(config, tool)) return "not-found"
 
     let cur: Record<string, unknown> = config
     for (const k of tool.mcpKey.slice(0, -1)) {
@@ -172,7 +178,11 @@ async function uninstallFromTool(tool: ToolDef): Promise<"removed" | "not-found"
     delete (cur[finalKey] as Record<string, unknown>)["you-md"]
     await writeJsonConfig(tool.configPath, config)
     return "removed"
-  } catch {
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      console.error(`✗ ${tool.name} — config file has corrupt JSON: ${tool.configPath}`)
+      console.error(`  Fix the JSON manually or delete the file and retry.`)
+    }
     return "error"
   }
 }
@@ -261,7 +271,7 @@ async function statusSkill(flags: CliFlags): Promise<number> {
   } else {
     for (const tool of detected) {
       const config = await readJsonConfig(tool.configPath)
-      const active = hasYouMdInstalled(config, tool.mcpKey)
+      const active = hasYouMdInstalled(config, tool)
       const icon = active ? "✓" : "○"
       const label = active ? "skill active" : "not installed"
       console.log(`${icon}  ${tool.name.padEnd(18)} ${label}`)
