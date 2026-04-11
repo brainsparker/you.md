@@ -259,11 +259,22 @@ async function statusSkill(flags: CliFlags): Promise<number> {
     console.log("No supported AI tools detected.")
   } else {
     for (const tool of detected) {
-      const config = await readJsonConfig(tool.configPath)
-      const active = hasYouMdInstalled(config, tool)
-      const icon = active ? "✓" : "○"
-      const label = active ? "skill active" : "not installed"
-      console.log(`${icon}  ${tool.name.padEnd(18)} ${label}`)
+      try {
+        const config = await readJsonConfig(tool.configPath)
+        const active = hasYouMdInstalled(config, tool)
+        const icon = active ? "✓" : "○"
+        const label = active ? "skill active" : "not installed"
+        console.log(`${icon}  ${tool.name.padEnd(18)} ${label}`)
+      } catch (err) {
+        const isSyntaxError = err instanceof SyntaxError
+        const icon = "!"
+        const label = "config JSON invalid"
+        console.log(`${icon}  ${tool.name.padEnd(18)} ${label}`)
+        if (isSyntaxError || flags.verbose) {
+          console.log(`   ${tool.configPath}`)
+          console.log("   Fix the JSON manually or delete the file, then rerun 'you-md skill status'.")
+        }
+      }
     }
   }
 
