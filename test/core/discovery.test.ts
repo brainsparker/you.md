@@ -32,6 +32,11 @@ describe("discoverProfilePath", () => {
     expect(result).toBeNull();
   });
 
+  it("returns null when explicit path points to a directory", async () => {
+    const result = await discoverProfilePath({ path: testDir });
+    expect(result).toBeNull();
+  });
+
   it("checks environment variable", async () => {
     const testFile = join(testDir, ".you.md");
     writeFileSync(testFile, "---\nschema_version: '1.0'\n---\n");
@@ -41,6 +46,14 @@ describe("discoverProfilePath", () => {
     const result = await discoverProfilePath();
 
     expect(result).toBe(testFile);
+  });
+
+  it("ignores environment variable when it points to a directory", async () => {
+    process.env.YOU_MD_PATH = testDir;
+
+    const result = await discoverProfilePath({ skipDiscovery: true });
+
+    expect(result).toBeNull();
   });
 
   it("checks project-local .you.md", async () => {

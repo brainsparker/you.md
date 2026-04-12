@@ -1,9 +1,21 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { homedir } from "node:os";
 
 import type { DiscoveryOptions } from "../types/options";
 import { DEFAULT_ENV_VAR, DEFAULT_FILE_NAMES } from "../utils/constants";
+
+function isExistingFile(path: string): boolean {
+  if (!existsSync(path)) {
+    return false;
+  }
+
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Discover the path to a you.md file based on precedence rules.
@@ -25,7 +37,7 @@ export async function discoverProfilePath(
   // 1. Explicit path (highest priority)
   if (options?.path) {
     const resolvedPath = resolve(options.path);
-    if (existsSync(resolvedPath)) {
+    if (isExistingFile(resolvedPath)) {
       return resolvedPath;
     }
     // If explicit path is given but doesn't exist, return null
@@ -49,7 +61,7 @@ export async function discoverProfilePath(
       }
     } else {
       const resolvedEnvPath = resolve(envPath);
-      if (existsSync(resolvedEnvPath)) {
+      if (isExistingFile(resolvedEnvPath)) {
         return resolvedEnvPath;
       }
     }
@@ -59,7 +71,7 @@ export async function discoverProfilePath(
   if (options?.searchPaths) {
     for (const searchPath of options.searchPaths) {
       const resolvedPath = resolve(searchPath);
-      if (existsSync(resolvedPath)) {
+      if (isExistingFile(resolvedPath)) {
         return resolvedPath;
       }
     }
@@ -69,7 +81,7 @@ export async function discoverProfilePath(
   const cwd = options?.cwd ?? process.cwd();
   for (const fileName of DEFAULT_FILE_NAMES) {
     const localPath = join(cwd, fileName);
-    if (existsSync(localPath)) {
+    if (isExistingFile(localPath)) {
       return localPath;
     }
   }
@@ -78,7 +90,7 @@ export async function discoverProfilePath(
   const home = homedir();
   for (const fileName of DEFAULT_FILE_NAMES) {
     const homePath = join(home, fileName);
-    if (existsSync(homePath)) {
+    if (isExistingFile(homePath)) {
       return homePath;
     }
   }
@@ -87,7 +99,7 @@ export async function discoverProfilePath(
   const xdgConfigHome = process.env.XDG_CONFIG_HOME ?? join(home, ".config");
   for (const fileName of DEFAULT_FILE_NAMES) {
     const xdgPath = join(xdgConfigHome, fileName);
-    if (existsSync(xdgPath)) {
+    if (isExistingFile(xdgPath)) {
       return xdgPath;
     }
   }
@@ -96,7 +108,7 @@ export async function discoverProfilePath(
   const xdgYouDir = join(xdgConfigHome, "you");
   for (const fileName of DEFAULT_FILE_NAMES) {
     const xdgYouPath = join(xdgYouDir, fileName);
-    if (existsSync(xdgYouPath)) {
+    if (isExistingFile(xdgYouPath)) {
       return xdgYouPath;
     }
   }

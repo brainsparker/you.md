@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createParser } from "../../src/parser";
 
 const fixturesDir = resolve(__dirname, "../../fixtures");
@@ -88,6 +90,18 @@ author: "Test"
 
       expect(result.success).toBe(false);
       expect(result.errors.some((e) => e.code === "FILE_NOT_FOUND")).toBe(true);
+    });
+
+    it("returns error when path is not a regular file", async () => {
+      const dir = mkdtempSync(join(tmpdir(), "you-md-parser-dir-"));
+      try {
+        const result = await parser.loadFromPath(dir);
+
+        expect(result.success).toBe(false);
+        expect(result.errors.some((e) => e.code === "PERMISSION_DENIED")).toBe(true);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
 
     it("handles malformed YAML", async () => {
