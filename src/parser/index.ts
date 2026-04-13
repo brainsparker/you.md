@@ -336,8 +336,6 @@ export class YouMdParserImpl implements YouMdParser {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
       if (!response.ok) {
         return {
           profile: createEmptyProfile(),
@@ -350,6 +348,25 @@ export class YouMdParserImpl implements YouMdParser {
           ],
           warnings: [],
         };
+      }
+
+      const maxSize = parseOptions?.maxFileSize ?? this.maxFileSize;
+      const contentLengthHeader = response.headers.get("content-length");
+      if (contentLengthHeader) {
+        const contentLength = Number(contentLengthHeader);
+        if (Number.isFinite(contentLength) && contentLength > maxSize) {
+          return {
+            profile: createEmptyProfile(),
+            success: false,
+            errors: [
+              {
+                code: "FILE_TOO_LARGE",
+                message: `Response size ${contentLength} bytes exceeds maximum ${maxSize} bytes`,
+              },
+            ],
+            warnings: [],
+          };
+        }
       }
 
       const content = await response.text();
@@ -366,8 +383,6 @@ export class YouMdParserImpl implements YouMdParser {
         profile: profileWithUrl,
       };
     } catch (err) {
-      clearTimeout(timeoutId);
-
       if (err instanceof Error && err.name === "AbortError") {
         return {
           profile: createEmptyProfile(),
@@ -393,6 +408,8 @@ export class YouMdParserImpl implements YouMdParser {
         ],
         warnings: [],
       };
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
