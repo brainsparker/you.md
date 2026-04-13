@@ -102,7 +102,9 @@ function isToolDetected(tool: ToolDef): boolean {
 export async function readJsonConfig(path: string): Promise<Record<string, unknown>> {
   if (!existsSync(path)) return {}
   const raw = await readFile(path, "utf-8")
-  return JSON.parse(raw) as Record<string, unknown>
+  const normalized = raw.replace(/^\uFEFF/, "").trim()
+  if (normalized.length === 0) return {}
+  return JSON.parse(normalized) as Record<string, unknown>
 }
 
 export async function writeJsonConfig(path: string, data: Record<string, unknown>): Promise<void> {

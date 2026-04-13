@@ -35,6 +35,23 @@ describe("readJsonConfig", () => {
     const result = await readJsonConfig(filePath);
     expect(result).toEqual(data);
   });
+
+  it("returns {} for empty files", async () => {
+    const filePath = join(tempDir, "empty.json");
+    writeFileSync(filePath, "   \n\t  ", "utf-8");
+
+    const result = await readJsonConfig(filePath);
+    expect(result).toEqual({});
+  });
+
+  it("parses valid JSON with a UTF-8 BOM", async () => {
+    const filePath = join(tempDir, "bom.json");
+    const data = { mcpServers: { "you-md": { command: "npx" } } };
+    writeFileSync(filePath, "\uFEFF" + JSON.stringify(data), "utf-8");
+
+    const result = await readJsonConfig(filePath);
+    expect(result).toEqual(data);
+  });
 });
 
 describe("writeJsonConfig", () => {
