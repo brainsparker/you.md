@@ -208,6 +208,20 @@ export class YouMdParserImpl implements YouMdParser {
       const stats = await stat(resolvedPath);
       const maxSize = options?.maxFileSize ?? this.maxFileSize;
 
+      if (!stats.isFile()) {
+        return {
+          profile: createEmptyProfile(),
+          success: false,
+          errors: [
+            {
+              code: "PERMISSION_DENIED",
+              message: `Path is not a regular file: ${resolvedPath}`,
+            },
+          ],
+          warnings: [],
+        };
+      }
+
       if (stats.size > maxSize) {
         return {
           profile: createEmptyProfile(),
