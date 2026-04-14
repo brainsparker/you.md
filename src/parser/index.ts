@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { isIP } from "node:net";
 
 import type {
   YouMdParser,
@@ -26,6 +27,54 @@ import {
   DEFAULT_FETCH_TIMEOUT,
   CURRENT_SCHEMA_VERSION,
 } from "../utils/constants";
+
+
+function isDisallowedHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+
+  if (
+    normalized === "localhost" ||
+    normalized === "localhost.localdomain" ||
+    normalized.endsWith(".localhost")
+  ) {
+    return true;
+  }
+
+  // Block link-local and local-domain names often used for internal routing.
+  if (normalized.endsWith(".local")) {
+    return true;
+  }
+
+  const ipType = isIP(normalized);
+  if (ipType === 4) {
+    const parts = normalized.split(".").map(Number);
+    const [a, b] = parts;
+
+    if (
+      a === 10 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a === 127 ||
+      a === 0 ||
+      (a === 169 && b === 254)
+    ) {
+      return true;
+    }
+  }
+
+  if (ipType === 6) {
+    if (
+      normalized === "::1" ||
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      normalized.startsWith("fe80:")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 /**
  * Default parser implementation
@@ -302,7 +351,7 @@ export class YouMdParserImpl implements YouMdParser {
       };
     }
 
-    // Enforce HTTPS
+    // Enforce HTTPS and block local/private network targets.
     if (parsedUrl.protocol !== "https:") {
       return {
         profile: createEmptyProfile(),
@@ -311,6 +360,20 @@ export class YouMdParserImpl implements YouMdParser {
           {
             code: "NETWORK_ERROR",
             message: "Only HTTPS URLs are supported",
+          },
+        ],
+        warnings: [],
+      };
+    }
+
+    if (isDisallowedHostname(parsedUrl.hostname)) {
+      return {
+        profile: createEmptyProfile(),
+        success: false,
+        errors: [
+          {
+            code: "NETWORK_ERROR",
+            message: "Refusing to fetch from local or private network addresses",
           },
         ],
         warnings: [],
@@ -335,6 +398,36 @@ export class YouMdParserImpl implements YouMdParser {
         headers,
         signal: controller.signal,
       });
+
+      // Guard against redirects to insecure or internal destinations.
+      const finalUrl = response.url ? new URL(response.url) : parsedUrl;
+      if (finalUrl.protocol !== "https:") {
+        return {
+          profile: createEmptyProfile(),
+          success: false,
+          errors: [
+            {
+              code: "NETWORK_ERROR",
+              message: "Redirected to non-HTTPS URL",
+            },
+          ],
+          warnings: [],
+        };
+      }
+
+      if (isDisallowedHostname(finalUrl.hostname)) {
+        return {
+          profile: createEmptyProfile(),
+          success: false,
+          errors: [
+            {
+              code: "NETWORK_ERROR",
+              message: "Redirected to local or private network address",
+            },
+          ],
+          warnings: [],
+        };
+      }
 
       if (!response.ok) {
         return {
