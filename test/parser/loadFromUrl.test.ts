@@ -47,4 +47,33 @@ describe("loadFromUrl hardening", () => {
     expect(result.success).toBe(false);
     expect(result.errors.some((e) => e.code === "TIMEOUT")).toBe(true);
   });
+
+  it("rejects oversized streamed responses when content-length is missing", async () => {
+    const parser = createParser();
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode("a".repeat(600)));
+        controller.enqueue(encoder.encode("b".repeat(600)));
+        controller.close();
+      },
+    });
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: { get: () => null },
+      body: stream,
+      text: vi.fn(async () => ""),
+    } as unknown as Response);
+
+    const result = await parser.loadFromUrl("https://example.com/profile.md", undefined, {
+      maxFileSize: 1024,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errors.some((e) => e.code === "FILE_TOO_LARGE")).toBe(true);
+  });
 });
