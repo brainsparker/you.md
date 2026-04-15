@@ -369,7 +369,7 @@ export class YouMdParserImpl implements YouMdParser {
         }
       }
 
-      const content = await response.text();
+      const content = await this.readResponseTextWithLimit(response, maxSize);
       const result = this.parse(content, parseOptions);
 
       // Add source URL to profile
@@ -397,6 +397,23 @@ export class YouMdParserImpl implements YouMdParser {
         };
       }
 
+      if (
+        err instanceof Error &&
+        err.message.includes("exceeds maximum")
+      ) {
+        return {
+          profile: createEmptyProfile(),
+          success: false,
+          errors: [
+            {
+              code: "FILE_TOO_LARGE",
+              message: err.message,
+            },
+          ],
+          warnings: [],
+        };
+      }
+
       return {
         profile: createEmptyProfile(),
         success: false,
@@ -411,6 +428,53 @@ export class YouMdParserImpl implements YouMdParser {
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private async readResponseTextWithLimit(
+    response: Response,
+    maxSize: number
+  ): Promise<string> {
+    if (!response.body) {
+      const content = await response.text();
+      const size = new TextEncoder().encode(content).length;
+      if (size > maxSize) {
+        throw new Error(
+          `Response size ${size} bytes exceeds maximum ${maxSize} bytes`
+        );
+      }
+      return content;
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      if (value) {
+        totalBytes += value.byteLength;
+        if (totalBytes > maxSize) {
+          await reader.cancel();
+          throw new Error(
+            `Response size ${totalBytes} bytes exceeds maximum ${maxSize} bytes`
+          );
+        }
+        chunks.push(value);
+      }
+    }
+
+    const contentBytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      contentBytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+
+    return new TextDecoder().decode(contentBytes);
   }
 
   async discover(options?: DiscoveryOptions): Promise<ParseResult | null> {
