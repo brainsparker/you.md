@@ -32,6 +32,12 @@ import {
  */
 export class YouMdParserImpl implements YouMdParser {
   private readonly maxFileSize: number;
+  private static readonly ALLOWED_REMOTE_CONTENT_TYPES = [
+    "text/markdown",
+    "text/plain",
+    "text/x-markdown",
+    "application/markdown",
+  ];
 
   constructor(options?: { maxFileSize?: number }) {
     this.maxFileSize = options?.maxFileSize ?? MAX_FILE_SIZE;
@@ -348,6 +354,33 @@ export class YouMdParserImpl implements YouMdParser {
           ],
           warnings: [],
         };
+      }
+
+      const contentTypeHeader = response.headers.get("content-type");
+      if (contentTypeHeader) {
+        const normalizedContentType = contentTypeHeader
+          .split(";")[0]
+          ?.trim()
+          .toLowerCase();
+
+        if (
+          normalizedContentType &&
+          !YouMdParserImpl.ALLOWED_REMOTE_CONTENT_TYPES.includes(
+            normalizedContentType
+          )
+        ) {
+          return {
+            profile: createEmptyProfile(),
+            success: false,
+            errors: [
+              {
+                code: "NETWORK_ERROR",
+                message: `Unsupported content type: ${normalizedContentType}`,
+              },
+            ],
+            warnings: [],
+          };
+        }
       }
 
       const maxSize = parseOptions?.maxFileSize ?? this.maxFileSize;

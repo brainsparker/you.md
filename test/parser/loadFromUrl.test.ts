@@ -76,4 +76,49 @@ describe("loadFromUrl hardening", () => {
     expect(result.success).toBe(false);
     expect(result.errors.some((e) => e.code === "FILE_TOO_LARGE")).toBe(true);
   });
+
+  it("rejects unsupported content types before reading body", async () => {
+    const parser = createParser();
+    const textSpy = vi.fn(async () => "---\nschema_version: \"1.1\"\n---\n# Me");
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === "content-type" ? "application/json" : null,
+      },
+      text: textSpy,
+    } as unknown as Response);
+
+    const result = await parser.loadFromUrl("https://example.com/profile.md");
+
+    expect(result.success).toBe(false);
+    expect(result.errors.some((e) => e.code === "NETWORK_ERROR")).toBe(true);
+    expect(result.errors[0]?.message).toContain("Unsupported content type");
+    expect(textSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts allowed content types with charset parameters", async () => {
+    const parser = createParser();
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === "content-type"
+            ? "text/markdown; charset=utf-8"
+            : null,
+      },
+      body: null,
+      text: vi.fn(async () => "---\nschema_version: \"1.1\"\n---\n# Me"),
+    } as unknown as Response);
+
+    const result = await parser.loadFromUrl("https://example.com/profile.md");
+
+    expect(result.success).toBe(true);
+  });
 });
