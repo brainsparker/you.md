@@ -334,6 +334,7 @@ export class YouMdParserImpl implements YouMdParser {
       const response = await fetch(url, {
         headers,
         signal: controller.signal,
+        redirect: "error",
       });
 
       if (!response.ok) {
@@ -408,6 +409,20 @@ export class YouMdParserImpl implements YouMdParser {
             {
               code: "FILE_TOO_LARGE",
               message: err.message,
+            },
+          ],
+          warnings: [],
+        };
+      }
+
+      if (err instanceof Error && /redirect/i.test(err.message)) {
+        return {
+          profile: createEmptyProfile(),
+          success: false,
+          errors: [
+            {
+              code: "NETWORK_ERROR",
+              message: "Redirects are not allowed for remote profile loading",
             },
           ],
           warnings: [],

@@ -48,6 +48,46 @@ describe("loadFromUrl hardening", () => {
     expect(result.errors.some((e) => e.code === "TIMEOUT")).toBe(true);
   });
 
+  it("disables redirects when fetching remote profiles", async () => {
+    const parser = createParser();
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: { get: () => null },
+      body: null,
+      text: vi.fn(async () => "---\nschema_version: \"1.1\"\n---\n# Me"),
+    } as unknown as Response);
+
+    await parser.loadFromUrl("https://example.com/profile.md");
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://example.com/profile.md",
+      expect.objectContaining({ redirect: "error" })
+    );
+  });
+
+  it("returns NETWORK_ERROR when upstream responds with a redirect", async () => {
+    const parser = createParser();
+
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new Error("redirect mode is set to error")
+    );
+
+    const result = await parser.loadFromUrl("https://example.com/profile.md");
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "NETWORK_ERROR",
+          message: "Redirects are not allowed for remote profile loading",
+        }),
+      ])
+    );
+  });
+
   it("rejects oversized streamed responses when content-length is missing", async () => {
     const parser = createParser();
     const encoder = new TextEncoder();
