@@ -27,6 +27,20 @@ describe("readJsonConfig", () => {
     await expect(readJsonConfig(filePath)).rejects.toThrow(SyntaxError);
   });
 
+  it("throws when JSON root is not an object", async () => {
+    const filePath = join(tempDir, "scalar.json");
+    writeFileSync(filePath, JSON.stringify("not-an-object"), "utf-8");
+
+    await expect(readJsonConfig(filePath)).rejects.toThrow(SyntaxError);
+  });
+
+  it("throws when JSON root is an array", async () => {
+    const filePath = join(tempDir, "array.json");
+    writeFileSync(filePath, JSON.stringify([{ mcpServers: {} }]), "utf-8");
+
+    await expect(readJsonConfig(filePath)).rejects.toThrow(SyntaxError);
+  });
+
   it("parses valid JSON correctly", async () => {
     const filePath = join(tempDir, "valid.json");
     const data = { mcpServers: { "some-tool": { command: "npx" } } };
