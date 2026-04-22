@@ -317,7 +317,7 @@ export class YouMdParserImpl implements YouMdParser {
       };
     }
 
-    const timeout = fetchOptions?.timeout ?? DEFAULT_FETCH_TIMEOUT;
+    const timeout = this.resolveFetchTimeout(fetchOptions?.timeout);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -428,6 +428,18 @@ export class YouMdParserImpl implements YouMdParser {
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private resolveFetchTimeout(timeoutMs?: number): number {
+    if (timeoutMs === undefined) {
+      return DEFAULT_FETCH_TIMEOUT;
+    }
+
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      return DEFAULT_FETCH_TIMEOUT;
+    }
+
+    return Math.floor(timeoutMs);
   }
 
   private async readResponseTextWithLimit(
