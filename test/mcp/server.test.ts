@@ -29,6 +29,10 @@ describe("MCP path validation", () => {
   it("rejects directory traversal", () => {
     expect(isPathSafe(resolve(homedir(), "..", "etc", "passwd"))).toBe(false);
   });
+
+  it("rejects invalid path input safely", () => {
+    expect(isPathSafe("bad\u0000path")).toBe(false);
+  });
 });
 
 describe("MCP server", () => {

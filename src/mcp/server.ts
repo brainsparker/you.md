@@ -21,15 +21,27 @@ const parser = createParser();
  * Rejects writes to arbitrary system locations (e.g. /etc, /tmp).
  */
 export function isPathSafe(targetPath: string): boolean {
-  const resolved = resolve(targetPath);
-  const home = homedir();
-  const cwd = process.cwd();
-  return (
-    resolved.startsWith(home + "/") ||
-    resolved === home ||
-    resolved.startsWith(cwd + "/") ||
-    resolved === cwd
-  );
+  if (targetPath.includes("\0") || targetPath.includes("\n") || targetPath.includes("\r")) {
+    return false;
+  }
+
+  try {
+    const resolved = resolve(targetPath);
+    const home = homedir();
+    const cwd = process.cwd();
+    return (
+      resolved.startsWith(home + "/") ||
+      resolved === home ||
+      resolved.startsWith(cwd + "/") ||
+      resolved === cwd
+    );
+  } catch {
+    return false;
+  }
+}
+
+function pathSafetyError(path: string): string {
+  return `Refused: path "${path}" is outside your home directory and current working directory. Provide a path under ~ or the project root.`;
 }
 
 /**
@@ -270,7 +282,7 @@ export async function createMcpServer(): Promise<Server> {
           content: [
             {
               type: "text" as const,
-              text: `Refused: path "${path}" is outside your home directory and current working directory. Provide a path under ~ or the project root.`,
+              text: pathSafetyError(path),
             },
           ],
         };
@@ -308,6 +320,17 @@ export async function createMcpServer(): Promise<Server> {
             {
               type: "text" as const,
               text: "Error: path is required",
+            },
+          ],
+        };
+      }
+
+      if (!isPathSafe(path)) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: pathSafetyError(path),
             },
           ],
         };
