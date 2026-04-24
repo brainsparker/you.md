@@ -14,7 +14,7 @@
  *   windsurf        Windsurf (~/.codeium/windsurf/mcp_config.json)
  */
 
-import { readFile, writeFile, mkdir, rename, copyFile } from "node:fs/promises"
+import { readFile, writeFile, mkdir, rename, copyFile, lstat } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { resolve, dirname } from "node:path"
 import { homedir, platform } from "node:os"
@@ -101,6 +101,7 @@ function isToolDetected(tool: ToolDef): boolean {
 
 export async function readJsonConfig(path: string): Promise<Record<string, unknown>> {
   if (!existsSync(path)) return {}
+  await assertSafeConfigPath(path)
   const raw = await readFile(path, "utf-8")
   const normalized = raw.replace(/^\uFEFF/, "").trim()
   if (normalized.length === 0) return {}
@@ -110,11 +111,22 @@ export async function readJsonConfig(path: string): Promise<Record<string, unkno
 export async function writeJsonConfig(path: string, data: Record<string, unknown>): Promise<void> {
   await mkdir(dirname(path), { recursive: true })
   if (existsSync(path)) {
+    await assertSafeConfigPath(path)
     await copyFile(path, path + ".backup")
   }
   const tmp = path + ".tmp"
   await writeFile(tmp, JSON.stringify(data, null, 2) + "\n", "utf-8")
   await rename(tmp, path)
+}
+
+async function assertSafeConfigPath(path: string): Promise<void> {
+  const stats = await lstat(path)
+  if (stats.isSymbolicLink()) {
+    throw new Error(`Refusing to use symlinked config path: ${path}`)
+  }
+  if (!stats.isFile()) {
+    throw new Error(`Config path is not a regular file: ${path}`)
+  }
 }
 
 

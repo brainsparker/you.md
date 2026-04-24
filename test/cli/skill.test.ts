@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
-import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { readJsonConfig, writeJsonConfig } from "../../src/cli/commands/skill";
 
@@ -51,6 +51,15 @@ describe("readJsonConfig", () => {
 
     const result = await readJsonConfig(filePath);
     expect(result).toEqual(data);
+  });
+
+  it("rejects symlinked config files", async () => {
+    const targetPath = join(tempDir, "target.json");
+    const linkPath = join(tempDir, "link.json");
+    writeFileSync(targetPath, JSON.stringify({ ok: true }), "utf-8");
+    symlinkSync(targetPath, linkPath);
+
+    await expect(readJsonConfig(linkPath)).rejects.toThrow(/symlinked config path/);
   });
 });
 
@@ -104,5 +113,14 @@ describe("writeJsonConfig", () => {
 
     const content = readFileSync(filePath, "utf-8");
     expect(content).toBe(JSON.stringify(data, null, 2) + "\n");
+  });
+
+  it("rejects writing to symlinked config files", async () => {
+    const targetPath = join(tempDir, "target-write.json");
+    const linkPath = join(tempDir, "link-write.json");
+    writeFileSync(targetPath, JSON.stringify({ existing: true }), "utf-8");
+    symlinkSync(targetPath, linkPath);
+
+    await expect(writeJsonConfig(linkPath, { updated: true })).rejects.toThrow(/symlinked config path/);
   });
 });
