@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { createParser } from "../../src/parser/index.js";
-import { DEFAULT_FETCH_TIMEOUT } from "../../src/utils/constants.js";
+import {
+  DEFAULT_FETCH_TIMEOUT,
+  MAX_FETCH_TIMEOUT,
+} from "../../src/utils/constants.js";
 
 describe("loadFromUrl hardening", () => {
   afterEach(() => {
@@ -98,5 +101,27 @@ describe("loadFromUrl hardening", () => {
     expect(result.success).toBe(true);
     expect(setTimeoutSpy).toHaveBeenCalled();
     expect(setTimeoutSpy.mock.calls[0]?.[1]).toBe(DEFAULT_FETCH_TIMEOUT);
+  });
+
+  it("caps fetch timeout when timeout is excessively large", async () => {
+    const parser = createParser();
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: { get: () => null },
+      body: null,
+      text: vi.fn(async () => "---\nschema_version: \"1.1\"\n---\n\n# Me\n"),
+    } as unknown as Response);
+
+    const result = await parser.loadFromUrl("https://example.com/profile.md", {
+      timeout: Number.MAX_SAFE_INTEGER,
+    });
+
+    expect(result.success).toBe(true);
+    expect(setTimeoutSpy).toHaveBeenCalled();
+    expect(setTimeoutSpy.mock.calls[0]?.[1]).toBe(MAX_FETCH_TIMEOUT);
   });
 });

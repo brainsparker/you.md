@@ -24,6 +24,7 @@ import { validateProfile } from "../core/validator";
 import {
   MAX_FILE_SIZE,
   DEFAULT_FETCH_TIMEOUT,
+  MAX_FETCH_TIMEOUT,
   CURRENT_SCHEMA_VERSION,
 } from "../utils/constants";
 
@@ -437,6 +438,10 @@ export class YouMdParserImpl implements YouMdParser {
 
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       return DEFAULT_FETCH_TIMEOUT;
+    }
+
+    if (timeoutMs > MAX_FETCH_TIMEOUT) {
+      return MAX_FETCH_TIMEOUT;
     }
 
     return Math.floor(timeoutMs);
