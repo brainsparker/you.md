@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { join } from "node:path";
 import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { readJsonConfig, writeJsonConfig } from "../../src/cli/commands/skill";
+import { readJsonConfig, writeJsonConfig, skillCommand } from "../../src/cli/commands/skill";
 
 const tempDir = join(tmpdir(), `you-md-skill-test-${Date.now()}`);
 
@@ -51,6 +51,19 @@ describe("readJsonConfig", () => {
 
     const result = await readJsonConfig(filePath);
     expect(result).toEqual(data);
+  });
+});
+
+describe("skill uninstall target validation", () => {
+  it("returns non-zero for unknown uninstall target", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const code = await skillCommand(["uninstall", "unknown-tool"], {});
+
+    expect(code).toBe(1);
+    expect(errorSpy.mock.calls.map(c => String(c[0] ?? "")).join("\n")).toContain("Unknown tool: unknown-tool");
+
+    errorSpy.mockRestore();
   });
 });
 
