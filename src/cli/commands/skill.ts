@@ -306,6 +306,15 @@ async function statusSkill(flags: CliFlags): Promise<number> {
 }
 
 async function uninstallSkill(target: string | undefined, flags: CliFlags): Promise<number> {
+  if (target) {
+    const known = TOOLS.find(t => t.id === target)
+    if (!known) {
+      console.error(`Unknown tool: ${target}`)
+      console.error(`Supported: ${TOOLS.map(t => t.id).join(", ")}`)
+      return 1
+    }
+  }
+
   const targets = target ? TOOLS.filter(t => t.id === target) : TOOLS
 
   let removed = 0
