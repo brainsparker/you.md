@@ -126,6 +126,21 @@ Just a regular profile.
       const signals = extractIdentitySignals(result.profile);
       expect(signals).toBeUndefined();
     });
+
+    it("drops non-finite numeric values", () => {
+      const result = parser.parse(`---
+schema_version: "1.0"
+---
+
+# Profile
+
+## Identity
+
+trust_score: Infinity
+`);
+      const signals = extractIdentitySignals(result.profile);
+      expect(signals).toBeUndefined();
+    });
   });
 
   describe("extractLocationSignals", () => {

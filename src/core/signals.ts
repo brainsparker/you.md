@@ -108,11 +108,15 @@ function toBoolean(value: YouMdField["value"]): boolean | undefined {
  * Convert a value to number
  */
 function toNumber(value: YouMdField["value"]): number | undefined {
-  if (typeof value === "number") return value;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
   if (typeof value === "string") {
     const num = parseFloat(value);
-    if (!isNaN(num)) return num;
+    if (!isNaN(num) && Number.isFinite(num)) return num;
   }
+
   return undefined;
 }
 
