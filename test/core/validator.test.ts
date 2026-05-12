@@ -126,6 +126,40 @@ describe("validateProfile", () => {
     expect(result.warnings.filter((w) => w.code === "INVALID_DATE_FORMAT")).toHaveLength(0);
   });
 
+  it("rejects impossible calendar dates", () => {
+    const profile: YouMdProfile = {
+      schemaVersion: "1.0",
+      metadata: {
+        schemaVersion: "1.0",
+        created: "2025-02-30",
+        lastUpdated: "2025-13-01",
+      },
+      sections: new Map(),
+      rawContent: "",
+    };
+
+    const result = validateProfile(profile);
+
+    expect(result.warnings.filter((w) => w.code === "INVALID_DATE_FORMAT")).toHaveLength(2);
+  });
+
+  it("rejects impossible ISO timestamps", () => {
+    const profile: YouMdProfile = {
+      schemaVersion: "1.0",
+      metadata: {
+        schemaVersion: "1.0",
+        created: "2025-01-01",
+        lastUpdated: "2025-01-01T25:00:00Z",
+      },
+      sections: new Map(),
+      rawContent: "",
+    };
+
+    const result = validateProfile(profile);
+
+    expect(result.warnings.some((w) => w.code === "INVALID_DATE_FORMAT")).toBe(true);
+  });
+
   it("warns about possible sensitive data", () => {
     const profile: YouMdProfile = {
       schemaVersion: "1.0",
