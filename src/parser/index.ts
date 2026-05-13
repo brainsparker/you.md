@@ -317,6 +317,20 @@ export class YouMdParserImpl implements YouMdParser {
       };
     }
 
+    if (parsedUrl.username || parsedUrl.password) {
+      return {
+        profile: createEmptyProfile(),
+        success: false,
+        errors: [
+          {
+            code: "NETWORK_ERROR",
+            message: "Credentials in URL are not supported",
+          },
+        ],
+        warnings: [],
+      };
+    }
+
     const timeout = this.resolveFetchTimeout(fetchOptions?.timeout);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);

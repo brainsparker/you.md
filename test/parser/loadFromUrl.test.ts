@@ -78,6 +78,18 @@ describe("loadFromUrl hardening", () => {
     expect(result.errors.some((e) => e.code === "FILE_TOO_LARGE")).toBe(true);
   });
 
+  it("rejects URLs containing embedded credentials", async () => {
+    const parser = createParser();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const result = await parser.loadFromUrl("https://user:secret@example.com/profile.md");
+
+    expect(result.success).toBe(false);
+    expect(result.errors.some((e) => e.code === "NETWORK_ERROR")).toBe(true);
+    expect(result.errors[0]?.message).toContain("Credentials in URL are not supported");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("falls back to default timeout when fetch timeout is invalid", async () => {
     const parser = createParser();
     const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
