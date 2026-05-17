@@ -313,6 +313,17 @@ export async function createMcpServer(): Promise<Server> {
         };
       }
 
+      if (!isPathSafe(path)) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Refused: path "${path}" is outside your home directory and current working directory. Provide a path under ~ or the project root.`,
+            },
+          ],
+        };
+      }
+
       const result = await parser.loadFromPath(path);
 
       if (!result.success) {
