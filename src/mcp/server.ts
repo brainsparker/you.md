@@ -10,8 +10,8 @@ import {
 import { createParser } from "../parser/index.js";
 import { getDefaultTemplate } from "../cli/templates/default.js";
 import { writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, realpathSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { homedir } from "node:os";
 
 const parser = createParser();
@@ -22,14 +22,43 @@ const parser = createParser();
  */
 export function isPathSafe(targetPath: string): boolean {
   const resolved = resolve(targetPath);
-  const home = homedir();
-  const cwd = process.cwd();
-  return (
-    resolved.startsWith(home + "/") ||
-    resolved === home ||
-    resolved.startsWith(cwd + "/") ||
-    resolved === cwd
-  );
+
+  const safeRoots = [homedir(), process.cwd()].map((root) => {
+    try {
+      return realpathSync(root);
+    } catch {
+      return resolve(root);
+    }
+  });
+
+  const isWithinSafeRoots = (path: string): boolean =>
+    safeRoots.some((root) => path === root || path.startsWith(root + "/"));
+
+  // Existing paths: validate their canonical location to prevent symlink escapes.
+  if (existsSync(resolved)) {
+    try {
+      return isWithinSafeRoots(realpathSync(resolved));
+    } catch {
+      return false;
+    }
+  }
+
+  // New paths: validate against the nearest existing parent directory's real path.
+  let cursor = dirname(resolved);
+  while (cursor !== dirname(cursor) && !existsSync(cursor)) {
+    cursor = dirname(cursor);
+  }
+
+  if (!existsSync(cursor)) {
+    return false;
+  }
+
+  try {
+    const canonicalParent = realpathSync(cursor);
+    return isWithinSafeRoots(canonicalParent);
+  } catch {
+    return false;
+  }
 }
 
 /**
