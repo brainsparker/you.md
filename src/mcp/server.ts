@@ -32,6 +32,10 @@ export function isPathSafe(targetPath: string): boolean {
   );
 }
 
+function buildUnsafePathMessage(path: string): string {
+  return `Refused: path "${path}" is outside your home directory and current working directory. Provide a path under ~ or the project root.`;
+}
+
 /**
  * Create and run the MCP server for you-md
  */
@@ -270,7 +274,7 @@ export async function createMcpServer(): Promise<Server> {
           content: [
             {
               type: "text" as const,
-              text: `Refused: path "${path}" is outside your home directory and current working directory. Provide a path under ~ or the project root.`,
+              text: buildUnsafePathMessage(path),
             },
           ],
         };
@@ -308,6 +312,17 @@ export async function createMcpServer(): Promise<Server> {
             {
               type: "text" as const,
               text: "Error: path is required",
+            },
+          ],
+        };
+      }
+
+      if (!isPathSafe(path)) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: buildUnsafePathMessage(path),
             },
           ],
         };
