@@ -8,6 +8,7 @@ export type Command =
   | "validate"
   | "merge"
   | "convert"
+  | "export"
   | "skill"
   | "check"
   | "help"
@@ -129,9 +130,17 @@ export function parseCliArgs(argv: string[]): CliArgs {
  * Check if a string is a valid command
  */
 function isValidCommand(cmd: string): cmd is Command {
-  return ["init", "validate", "merge", "convert", "skill", "check", "help", "version"].includes(
-    cmd
-  );
+  return [
+    "init",
+    "validate",
+    "merge",
+    "convert",
+    "export",
+    "skill",
+    "check",
+    "help",
+    "version",
+  ].includes(cmd);
 }
 
 /**
@@ -150,6 +159,7 @@ Commands:
   validate <path>          Validate a you.md file
   merge <paths...>         Merge multiple you.md files
   convert <input>          Convert from other formats (.cursorrules, etc.)
+  export [target]          Export your profile as AGENTS.md, CLAUDE.md, GEMINI.md, or Copilot instructions
   help                     Show this help message
   version                  Show version number
 
@@ -175,6 +185,10 @@ Examples:
   you-md validate ./you.md                 Validate a file
   you-md merge ~/.you.md ./.you.md         Merge user and project profiles
   you-md convert .cursorrules              Convert .cursorrules to you.md
+  you-md export                            Print AGENTS.md content from your profile
+  you-md export agents -o AGENTS.md        Write AGENTS.md for Codex, Cursor, Copilot, etc.
+  you-md export claude -o CLAUDE.md        Write CLAUDE.md for Claude Code
+  you-md export list                       List available export targets
 
 Documentation: https://github.com/briansparker/You
 `.trim();

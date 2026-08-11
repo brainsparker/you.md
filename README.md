@@ -61,6 +61,25 @@ The skill works via [MCP (Model Context Protocol)](https://modelcontextprotocol.
 
 ---
 
+## Export to AGENTS.md (tools without MCP)
+
+Not every coding agent speaks MCP, but more than 20 of them (OpenAI Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, Aider, Zed, and more) natively read [AGENTS.md](https://agents.md), the open context-file standard now stewarded by the Linux Foundation. `you-md export` renders your profile into that format so those tools know you too:
+
+```bash
+npx you-md export                       # Print AGENTS.md content to stdout
+npx you-md export agents -o AGENTS.md   # Write AGENTS.md into the current repo
+npx you-md export claude -o CLAUDE.md   # Claude Code variant
+npx you-md export gemini -o GEMINI.md   # Gemini CLI variant
+npx you-md export copilot -o .github/copilot-instructions.md
+npx you-md export list                  # Show all targets
+```
+
+The generated file carries a header marking it as generated from you.md, so you always edit your profile and re-run the export rather than editing the output by hand. Existing files are never overwritten unless you pass `--force`, and exporting a profile marked `privacy_level: private` to a file prints a reminder that AGENTS.md files usually get committed to repositories.
+
+Tip: if you use both AGENTS.md and Claude Code, generate AGENTS.md and put a one-line `@AGENTS.md` import at the top of your CLAUDE.md so the two never drift.
+
+---
+
 ## Manual installation (advanced)
 
 If you prefer to configure tools manually, add this to your tool's MCP config:
@@ -110,6 +129,9 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 
 # Convert from .cursorrules
 you-md convert .cursorrules -o .you.md
+
+# Export your profile for AGENTS.md-compatible tools
+you-md export agents -o AGENTS.md
 ```
 
 ### Library Usage
@@ -305,6 +327,17 @@ Convert from other formats to you.md.
 ```bash
 you-md convert .cursorrules              # Output to stdout
 you-md convert .cursorrules -o .you.md   # Output to file
+```
+
+### `you-md export [target]`
+
+Export your profile as an agent context file. Targets: `agents` (default), `claude`, `gemini`, `copilot`.
+
+```bash
+you-md export                            # AGENTS.md content to stdout
+you-md export agents -o AGENTS.md        # Write file (refuses overwrite without --force)
+you-md export claude -o CLAUDE.md        # Claude Code variant
+you-md export list                       # List available targets
 ```
 
 ## API Reference
