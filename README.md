@@ -110,6 +110,11 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 
 # Convert from .cursorrules
 you-md convert .cursorrules -o .you.md
+
+# Export your preferences into each tool's native instruction file
+you-md export --all               Export to every supported tool
+you-md export claude gemini       Export to specific tools
+you-md export --all --dry-run     Preview without writing
 ```
 
 ### Library Usage
@@ -306,6 +311,37 @@ Convert from other formats to you.md.
 you-md convert .cursorrules              # Output to stdout
 you-md convert .cursorrules -o .you.md   # Output to file
 ```
+
+### `you-md export [targets...]`
+
+Write your you.md preferences into each tool's native instruction file. This is the
+outbound counterpart to `convert`: tools that don't speak MCP (or that you haven't
+wired the skill into) still get your preferences, because they already read these
+files at session start.
+
+```bash
+you-md export --all                # Export to every supported tool
+you-md export claude gemini        # Export to specific tools
+you-md export --all --dry-run      # Preview paths and actions, write nothing
+you-md export claude -o ./out.md   # Override the output path (single target)
+```
+
+Supported targets:
+
+| Target     | Tool               | File written                                   |
+| ---------- | ------------------ | ---------------------------------------------- |
+| `claude`   | Claude Code        | `~/.claude/CLAUDE.md`                          |
+| `codex`    | Codex CLI          | `~/.codex/AGENTS.md`                           |
+| `gemini`   | Gemini CLI         | `~/.gemini/GEMINI.md`                          |
+| `windsurf` | Windsurf           | `~/.codeium/windsurf/memories/global_rules.md` |
+| `cursor`   | Cursor             | `./.cursor/rules/you-md.mdc`                   |
+| `agents`   | Any AGENTS.md tool | `./AGENTS.md`                                  |
+
+Exports are idempotent. Managed content lives between `<!-- you-md:begin -->` and
+`<!-- you-md:end -->` markers, so anything else you keep in those files is preserved,
+and re-running `you-md export` updates the block in place. Existing files are backed
+up to `<file>.backup` before each write. The `cursor` target is the exception: it
+writes a dedicated `you-md.mdc` rule file that you-md owns entirely.
 
 ## API Reference
 
