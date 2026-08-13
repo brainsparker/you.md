@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in you.md is not working as documented
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: you-md version
+      description: Output of you-md version (or the commit SHA if running from source)
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS and Node.js version
+      placeholder: "macOS 15, Node 22.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI (init, validate, merge, convert)
+        - Skill installer (you-md skill install/status)
+        - MCP server (you-md-mcp)
+        - Parser / file format
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you run, what did you expect, and what happened instead? Include the full command and output.
+    validations:
+      required: true
+  - type: textarea
+    id: profile
+    attributes:
+      label: Minimal you.md profile that reproduces it
+      description: If the bug involves parsing or preferences, paste a minimal profile. Remove anything personal first.
+      render: markdown
