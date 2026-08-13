@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { isIP } from "node:net";
 import { resolve } from "node:path";
 
 import type {
@@ -27,6 +28,85 @@ import {
   MAX_FETCH_TIMEOUT,
   CURRENT_SCHEMA_VERSION,
 } from "../utils/constants";
+
+/**
+ * True when the IPv4 address (as octets) falls in a loopback, private,
+ * link-local, CGNAT, or unspecified range.
+ */
+function ipv4IsPrivate(parts: number[]): boolean {
+  const [a, b] = parts;
+  return (
+    a === 0 || // 0.0.0.0/8 unspecified
+    a === 10 || // 10.0.0.0/8 private
+    a === 127 || // 127.0.0.0/8 loopback
+    (a === 100 && b >= 64 && b <= 127) || // 100.64.0.0/10 CGNAT
+    (a === 169 && b === 254) || // 169.254.0.0/16 link-local (cloud metadata)
+    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12 private
+    (a === 192 && b === 168) // 192.168.0.0/16 private
+  );
+}
+
+/**
+ * SSRF guard for remote profile loading: true when a URL hostname points at
+ * a local or private network location that a profile fetch must never reach
+ * (loopback, RFC 1918/4193 ranges, link-local including cloud metadata
+ * endpoints, and mDNS/internal name suffixes).
+ *
+ * Expects a WHATWG `URL.hostname` value, which is already lowercased and
+ * canonicalized (IPv6 arrives bracketed, IPv4-mapped IPv6 in hex form).
+ */
+export function isDisallowedRemoteHostname(rawHostname: string): boolean {
+  let hostname = rawHostname.toLowerCase();
+  if (hostname.startsWith("[") && hostname.endsWith("]")) {
+    hostname = hostname.slice(1, -1);
+  }
+
+  if (
+    hostname === "localhost" ||
+    hostname === "localhost.localdomain" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal")
+  ) {
+    return true;
+  }
+
+  const ipType = isIP(hostname);
+
+  if (ipType === 4) {
+    return ipv4IsPrivate(hostname.split(".").map(Number));
+  }
+
+  if (ipType === 6) {
+    if (hostname === "::" || hostname === "::1") {
+      return true; // unspecified / loopback
+    }
+    if (hostname.startsWith("fc") || hostname.startsWith("fd")) {
+      return true; // fc00::/7 unique-local
+    }
+    if (/^fe[89ab]/.test(hostname)) {
+      return true; // fe80::/10 link-local
+    }
+    // IPv4-mapped IPv6: check the embedded IPv4 address against v4 ranges.
+    if (hostname.startsWith("::ffff:")) {
+      const rest = hostname.slice("::ffff:".length);
+      if (isIP(rest) === 4) {
+        return ipv4IsPrivate(rest.split(".").map(Number));
+      }
+      const groups = rest.split(":");
+      if (groups.length === 2) {
+        const hi = Number.parseInt(groups[0], 16);
+        const lo = Number.parseInt(groups[1], 16);
+        if (Number.isFinite(hi) && Number.isFinite(lo)) {
+          return ipv4IsPrivate([hi >> 8, hi & 0xff, lo >> 8, lo & 0xff]);
+        }
+      }
+      return true; // unparseable mapped form: refuse rather than guess
+    }
+  }
+
+  return false;
+}
 
 /**
  * Default parser implementation
@@ -326,6 +406,21 @@ export class YouMdParserImpl implements YouMdParser {
           {
             code: "NETWORK_ERROR",
             message: "Credentials in URL are not supported",
+          },
+        ],
+        warnings: [],
+      };
+    }
+
+    if (isDisallowedRemoteHostname(parsedUrl.hostname)) {
+      return {
+        profile: createEmptyProfile(),
+        success: false,
+        errors: [
+          {
+            code: "NETWORK_ERROR",
+            message:
+              "Refusing to fetch profiles from local or private network addresses",
           },
         ],
         warnings: [],
