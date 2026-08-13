@@ -1,7 +1,7 @@
 {
   "name": "you-md",
   "version": "0.2.0",
-  "description": "A skill that makes every AI tool know you — portable preferences and context across Claude Code, Cursor, Windsurf, and more",
+  "description": "A skill that makes every AI tool know you \u2014 portable preferences and context across Claude Code, Cursor, Windsurf, and more",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -55,12 +55,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/briansparker/You.git"
+    "url": "git+https://github.com/brainsparker/you.md.git"
   },
   "bugs": {
-    "url": "https://github.com/briansparker/You/issues"
+    "url": "https://github.com/brainsparker/you.md/issues"
   },
-  "homepage": "https://github.com/briansparker/You#readme",
+  "homepage": "https://github.com/brainsparker/you.md#readme",
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@types/node": "^25.0.3",
