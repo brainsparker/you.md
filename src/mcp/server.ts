@@ -1,4 +1,5 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { getPackageVersion } from "../utils/version.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
@@ -39,7 +40,7 @@ export async function createMcpServer(): Promise<Server> {
   const server = new Server(
     {
       name: "you-md",
-      version: "0.1.0",
+      version: getPackageVersion(),
     },
     {
       capabilities: {

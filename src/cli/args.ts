@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { getPackageVersion } from "../utils/version.js";
 
 /**
  * CLI command types
@@ -184,5 +185,5 @@ Documentation: https://github.com/briansparker/You
  * Get version text
  */
 export function getVersionText(): string {
-  return "you-md version 0.1.0";
+  return `you-md version ${getPackageVersion()}`;
 }

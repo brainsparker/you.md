@@ -7,26 +7,31 @@ Every AI tool you open starts from zero. It doesn't know how you think, what you
 you.md fixes that. Define yourself once in a simple markdown file. Install the skill. Every AI tool you use — Cursor, Claude Code, Windsurf, and more — now knows exactly who you are and how you work.
 
 ```bash
-# Install the skill into all your AI tools in one command
-npx you-md skill install
+# Install the CLI, then wire the skill into all your AI tools
+npm install -g @brainsparker/you-md
+you-md skill install
 ```
 
 That's it. No manual JSON editing. No per-tool setup. The skill auto-detects every supported tool you have installed and wires itself in.
+
+> **Package name:** install `@brainsparker/you-md` (the CLI commands are still `you-md` and `you-md-mcp`). The unscoped `youmd` package on npm is an unrelated project by a different author.
 
 ---
 
 ## Quick Start
 
+Install once: `npm install -g @brainsparker/you-md` (or prefix any command below with `npx -y -p @brainsparker/you-md`).
+
 ### 1. Create your you.md profile
 
 ```bash
-npx you-md init -i    # Interactive wizard (recommended)
+you-md init -i    # Interactive wizard (recommended)
 ```
 
 ### 2. Install the skill
 
 ```bash
-npx you-md skill install
+you-md skill install
 ```
 
 This auto-detects and configures: **Claude Code**, **Claude Desktop**, **Cursor**, and **Windsurf**.
@@ -36,7 +41,7 @@ Restart your AI tools. They now know you.
 ### 3. Check your status
 
 ```bash
-npx you-md skill status
+you-md skill status
 ```
 
 ---
@@ -70,7 +75,7 @@ If you prefer to configure tools manually, add this to your tool's MCP config:
   "mcpServers": {
     "you-md": {
       "command": "npx",
-      "args": ["-y", "-p", "you-md", "you-md-mcp"]
+      "args": ["-y", "-p", "@brainsparker/you-md", "you-md-mcp"]
     }
   }
 }
@@ -115,7 +120,7 @@ you-md convert .cursorrules -o .you.md
 ### Library Usage
 
 ```typescript
-import { createParser } from "you-md";
+import { createParser } from "@brainsparker/you-md";
 
 const parser = createParser();
 
