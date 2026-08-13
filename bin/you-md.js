@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-import("../dist/cli.mjs").then(({ main }) => main());
+import("../dist/cli.mjs");
