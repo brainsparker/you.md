@@ -2,6 +2,8 @@
 
 **Who you are. What you've lived. What you're becoming.**
 
+![you.md quickstart: init a profile, validate it, and install the skill into Claude Code and Cursor](assets/quickstart.gif)
+
 Every AI tool you open starts from zero. It doesn't know how you think, what you've built, or where you're headed. You re-explain yourself every session, every tool, every project.
 
 you.md fixes that. Define yourself once in a simple markdown file. Install the skill. Every AI tool you use — Cursor, Claude Code, Windsurf, and more — now knows exactly who you are and how you work.
