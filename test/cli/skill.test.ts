@@ -133,3 +133,17 @@ describe("writeJsonConfig", () => {
     expect(content).toBe(JSON.stringify(data, null, 2) + "\n");
   });
 });
+
+describe("MCP entry package spec", () => {
+  it("references the published scoped package, not the unscoped name", async () => {
+    const source = readFileSync(
+      new URL("../../src/cli/commands/skill.ts", import.meta.url),
+      "utf-8"
+    );
+    // The unscoped you-md package does not exist on npm (name blocked as
+    // too similar to the unrelated youmd package). The injected MCP entry
+    // must point npx at the published scoped package.
+    expect(source).toContain('"-p", "@brainsparker/you-md"');
+    expect(source).not.toMatch(/"-p",\s*"you-md"/);
+  });
+});

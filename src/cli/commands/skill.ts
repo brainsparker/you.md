@@ -85,10 +85,12 @@ const TOOLS: ToolDef[] = [
   },
 ]
 
-// The MCP server entry to inject
+// The MCP server entry to inject. The npm package is scoped
+// (@brainsparker/you-md); the "you-md" key in mcpServers and the
+// you-md-mcp bin name are unchanged.
 const MCP_ENTRY = {
   command: "npx",
-  args: ["-y", "-p", "you-md", "you-md-mcp"],
+  args: ["-y", "-p", "@brainsparker/you-md", "you-md-mcp"],
 }
 
 // ---------------------------------------------------------------------------
