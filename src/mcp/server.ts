@@ -10,6 +10,7 @@ import {
 
 import { createParser } from "../parser/index.js";
 import { getDefaultTemplate } from "../cli/templates/default.js";
+import { formatProfileForContext, type FormattableProfile } from "../core/formatter.js";
 import { writeFile } from "node:fs/promises";
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -481,43 +482,14 @@ export async function createMcpServer(): Promise<Server> {
 }
 
 /**
- * Format a profile for injection into AI context
+ * Format a profile for injection into AI context.
+ * Delegates to the shared formatter used by the CLI export command.
  */
-function formatPreferencesForContext(profile: {
-  sections: Map<string, { title: string; content: string; subsections: { title: string; content: string }[] }>;
-  metadata: { author?: string };
-}): string {
-  const lines: string[] = [];
-
-  lines.push("# User Preferences (from you.md)");
-  lines.push("");
-
-  if (profile.metadata.author) {
-    lines.push(`Author: ${profile.metadata.author}`);
-    lines.push("");
-  }
-
-  for (const [, section] of profile.sections) {
-    lines.push(`## ${section.title}`);
-    lines.push("");
-    if (section.content) {
-      lines.push(section.content);
-      lines.push("");
-    }
-    for (const sub of section.subsections) {
-      lines.push(`### ${sub.title}`);
-      lines.push("");
-      if (sub.content) {
-        lines.push(sub.content);
-        lines.push("");
-      }
-    }
-  }
-
-  return lines.join("\n");
+function formatPreferencesForContext(profile: FormattableProfile): string {
+  return formatProfileForContext(profile);
 }
 
-type Profile = Parameters<typeof formatPreferencesForContext>[0]
+type Profile = FormattableProfile
 
 /**
  * Build a concise one-paragraph summary of the user for quick context injection
