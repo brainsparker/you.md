@@ -13,6 +13,10 @@ npx you-md skill install
 
 That's it. No manual JSON editing. No per-tool setup. The skill auto-detects every supported tool you have installed and wires itself in.
 
+> **Running from source (until the first npm release):** the `you-md` package is not yet published to npm, so `npx you-md` commands will work after the first release. Today, clone this repo, run `npm install && npm run build`, and substitute `node dist/cli.js` for `npx you-md` in any command below.
+
+> **Name note:** this project is `you-md` (the you.md preferences protocol by [Brian Sparker](https://github.com/brainsparker)). It is unrelated to the `youmd` package on npm, which is a different project by a different author. If an install pulls `youmd`, you have the wrong package.
+
 ---
 
 ## Quick Start
