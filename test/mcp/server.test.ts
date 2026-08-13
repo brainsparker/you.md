@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { isPathSafe, createMcpServer } from "../../src/mcp/server.js";
-import { homedir } from "node:os";
-import { resolve } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { mkdtempSync, mkdirSync, symlinkSync, rmSync } from "node:fs";
 
 describe("MCP path validation", () => {
   it("allows paths under home directory", () => {
@@ -28,6 +29,26 @@ describe("MCP path validation", () => {
 
   it("rejects directory traversal", () => {
     expect(isPathSafe(resolve(homedir(), "..", "etc", "passwd"))).toBe(false);
+  });
+
+  it("rejects symlink escapes outside safe roots", () => {
+    const base = mkdtempSync(join(tmpdir(), "youmd-pathsafe-"));
+    try {
+      const outside = join(base, "outside");
+      mkdirSync(outside);
+
+      const linkPath = join(process.cwd(), "symlink-outside-test");
+      rmSync(linkPath, { force: true, recursive: true });
+      symlinkSync(outside, linkPath);
+
+      expect(isPathSafe(join(linkPath, "you.md"))).toBe(false);
+    } finally {
+      rmSync(join(process.cwd(), "symlink-outside-test"), {
+        force: true,
+        recursive: true,
+      });
+      rmSync(base, { force: true, recursive: true });
+    }
   });
 });
 

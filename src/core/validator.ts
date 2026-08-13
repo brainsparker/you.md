@@ -222,9 +222,31 @@ function validateMetadata(
  * Check if a string is a valid ISO 8601 date format
  */
 function isValidDateFormat(dateStr: string): boolean {
-  // Accept YYYY-MM-DD or full ISO 8601
-  const datePattern = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?$/;
-  return datePattern.test(dateStr);
+  // Accept YYYY-MM-DD or full ISO 8601 timestamp
+  const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const timestampPattern =
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+  const dateOnlyMatch = dateStr.match(dateOnlyPattern);
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const month = Number(dateOnlyMatch[2]);
+    const day = Number(dateOnlyMatch[3]);
+
+    const utcDate = new Date(Date.UTC(year, month - 1, day));
+    return (
+      utcDate.getUTCFullYear() === year &&
+      utcDate.getUTCMonth() === month - 1 &&
+      utcDate.getUTCDate() === day
+    );
+  }
+
+  if (timestampPattern.test(dateStr)) {
+    const parsed = new Date(dateStr);
+    return !Number.isNaN(parsed.getTime());
+  }
+
+  return false;
 }
 
 /**

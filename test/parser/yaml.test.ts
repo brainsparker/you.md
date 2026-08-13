@@ -137,4 +137,34 @@ key: value # inline comment
 
     expect(result.data.version).toBe(1.5);
   });
+
+  it("rejects unsafe top-level keys to prevent prototype pollution", () => {
+    const input = `
+safe: ok
+__proto__: hacked
+constructor: nope
+prototype: nope
+`;
+
+    const result = parseYaml(input);
+
+    expect(result.data.safe).toBe("ok");
+    expect(result.data).not.toHaveProperty("__proto__");
+    expect(result.data).not.toHaveProperty("constructor");
+    expect(result.data).not.toHaveProperty("prototype");
+    expect(result.errors.some(e => e.message.includes("Unsafe key not allowed: __proto__"))).toBe(true);
+    expect(result.errors.some(e => e.message.includes("Unsafe key not allowed: constructor"))).toBe(true);
+    expect(result.errors.some(e => e.message.includes("Unsafe key not allowed: prototype"))).toBe(true);
+  });
+
+  it("rejects unsafe keys inside inline objects", () => {
+    const input = `prefs: {theme: dark, __proto__: hacked}`;
+
+    const result = parseYaml(input);
+    const prefs = result.data.prefs as Record<string, unknown>;
+
+    expect(prefs.theme).toBe("dark");
+    expect(prefs).not.toHaveProperty("__proto__");
+    expect(result.errors.some(e => e.message.includes("Unsafe key not allowed: __proto__"))).toBe(true);
+  });
 });
