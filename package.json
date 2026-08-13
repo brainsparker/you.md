@@ -1,7 +1,7 @@
 {
   "name": "@brainsparker/you-md",
-  "version": "0.2.0",
-  "description": "A skill that makes every AI tool know you \u2014 portable preferences and context across Claude Code, Cursor, Windsurf, and more",
+  "version": "0.2.1",
+  "description": "A skill that makes every AI tool know you — portable preferences and context across Claude Code, Cursor, Windsurf, and more",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
