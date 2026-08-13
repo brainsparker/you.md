@@ -104,7 +104,13 @@ export async function readJsonConfig(path: string): Promise<Record<string, unkno
   const raw = await readFile(path, "utf-8")
   const normalized = raw.replace(/^\uFEFF/, "").trim()
   if (normalized.length === 0) return {}
-  return JSON.parse(normalized) as Record<string, unknown>
+
+  const parsed = JSON.parse(normalized) as unknown
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new SyntaxError("Config JSON root must be an object")
+  }
+
+  return parsed as Record<string, unknown>
 }
 
 export async function writeJsonConfig(path: string, data: Record<string, unknown>): Promise<void> {

@@ -14,6 +14,11 @@ export const MAX_PARSE_TIME = 50;
 export const DEFAULT_FETCH_TIMEOUT = 5000;
 
 /**
+ * Maximum allowed fetch timeout in milliseconds
+ */
+export const MAX_FETCH_TIMEOUT = 60_000;
+
+/**
  * Default environment variable name for you.md path
  */
 export const DEFAULT_ENV_VAR = "YOU_MD_PATH";

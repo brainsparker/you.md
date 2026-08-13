@@ -20,6 +20,12 @@ export interface YamlError {
   readonly column: number;
 }
 
+const UNSAFE_OBJECT_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+function isUnsafeObjectKey(key: string): boolean {
+  return UNSAFE_OBJECT_KEYS.has(key.trim());
+}
+
 /**
  * Parse a YAML string into a JavaScript object.
  * This is a minimal YAML parser supporting the subset needed for you.md frontmatter.
@@ -119,6 +125,16 @@ function parseBlock(
 
     const key = trimmed.slice(0, colonIndex).trim();
     const valueStr = trimmed.slice(colonIndex + 1).trim();
+
+    if (isUnsafeObjectKey(key)) {
+      errors.push({
+        message: `Unsafe key not allowed: ${key}`,
+        line: i + 1,
+        column: colonIndex + 1,
+      });
+      i++;
+      continue;
+    }
 
     // Handle multi-line strings
     if (valueStr === "|" || valueStr === ">" || valueStr === "|+" || valueStr === ">+") {
@@ -495,7 +511,15 @@ function parseInlineObject(
       if (colonIdx !== -1) {
         const key = pair.slice(0, colonIdx).trim();
         const val = pair.slice(colonIdx + 1).trim();
-        result[key] = parseValue(val, errors, line);
+        if (isUnsafeObjectKey(key)) {
+          errors.push({
+            message: `Unsafe key not allowed: ${key}`,
+            line,
+            column: colonIdx + 1,
+          });
+        } else {
+          result[key] = parseValue(val, errors, line);
+        }
       }
       current = "";
       continue;
@@ -511,7 +535,15 @@ function parseInlineObject(
     if (colonIdx !== -1) {
       const key = pair.slice(0, colonIdx).trim();
       const val = pair.slice(colonIdx + 1).trim();
-      result[key] = parseValue(val, errors, line);
+      if (isUnsafeObjectKey(key)) {
+        errors.push({
+          message: `Unsafe key not allowed: ${key}`,
+          line,
+          column: colonIdx + 1,
+        });
+      } else {
+        result[key] = parseValue(val, errors, line);
+      }
     }
   }
 

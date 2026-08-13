@@ -24,6 +24,7 @@ import { validateProfile } from "../core/validator";
 import {
   MAX_FILE_SIZE,
   DEFAULT_FETCH_TIMEOUT,
+  MAX_FETCH_TIMEOUT,
   CURRENT_SCHEMA_VERSION,
 } from "../utils/constants";
 
@@ -317,6 +318,20 @@ export class YouMdParserImpl implements YouMdParser {
       };
     }
 
+    if (parsedUrl.username || parsedUrl.password) {
+      return {
+        profile: createEmptyProfile(),
+        success: false,
+        errors: [
+          {
+            code: "NETWORK_ERROR",
+            message: "Credentials in URL are not supported",
+          },
+        ],
+        warnings: [],
+      };
+    }
+
     const timeout = this.resolveFetchTimeout(fetchOptions?.timeout);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -334,6 +349,7 @@ export class YouMdParserImpl implements YouMdParser {
       const response = await fetch(url, {
         headers,
         signal: controller.signal,
+        redirect: "error",
       });
 
       if (!response.ok) {
@@ -414,6 +430,20 @@ export class YouMdParserImpl implements YouMdParser {
         };
       }
 
+      if (err instanceof Error && /redirect/i.test(err.message)) {
+        return {
+          profile: createEmptyProfile(),
+          success: false,
+          errors: [
+            {
+              code: "NETWORK_ERROR",
+              message: "Redirects are not allowed for remote profile loading",
+            },
+          ],
+          warnings: [],
+        };
+      }
+
       return {
         profile: createEmptyProfile(),
         success: false,
@@ -437,6 +467,10 @@ export class YouMdParserImpl implements YouMdParser {
 
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       return DEFAULT_FETCH_TIMEOUT;
+    }
+
+    if (timeoutMs > MAX_FETCH_TIMEOUT) {
+      return MAX_FETCH_TIMEOUT;
     }
 
     return Math.floor(timeoutMs);
