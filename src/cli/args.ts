@@ -10,6 +10,7 @@ export type Command =
   | "merge"
   | "convert"
   | "export"
+  | "sync"
   | "skill"
   | "check"
   | "help"
@@ -65,6 +66,9 @@ export interface CliFlags {
 
   /** Preview without writing (export) */
   dryRun?: boolean;
+
+  /** Report drift without writing, exit 1 if any (sync) */
+  check?: boolean;
 }
 
 /**
@@ -87,6 +91,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     interactive: { type: "boolean" as const, short: "i" },
     all: { type: "boolean" as const },
     "dry-run": { type: "boolean" as const },
+    check: { type: "boolean" as const },
   };
 
   try {
@@ -125,6 +130,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         interactive: values.interactive,
         all: values.all,
         dryRun: values["dry-run"],
+        check: values.check,
       },
     };
   } catch (error) {
@@ -147,6 +153,7 @@ function isValidCommand(cmd: string): cmd is Command {
     "merge",
     "convert",
     "export",
+    "sync",
     "skill",
     "check",
     "help",
@@ -171,6 +178,7 @@ Commands:
   merge <paths...>         Merge multiple you.md files
   convert <input>          Convert from other formats (.cursorrules, etc.)
   export <target...>       Export preferences into tools' native instruction files
+  sync                     Refresh previously exported files when your you.md changes
   help                     Show this help message
   version                  Show version number
 
@@ -185,7 +193,8 @@ Options:
   --force                  Force overwrite existing files
   --json                   Output as JSON
   --all                    Export to all supported targets
-  --dry-run                Preview export without writing files
+  --dry-run                Preview export/sync without writing files
+  --check                  Sync: report drift without writing, exit 1 if any
 
 Examples:
   you-md skill install                     Install into all detected AI tools
@@ -200,6 +209,8 @@ Examples:
   you-md convert .cursorrules              Convert .cursorrules to you.md
   you-md export claude gemini              Export to Claude Code and Gemini CLI
   you-md export --all --dry-run            Preview export to every tool
+  you-md sync                              Refresh every exported file after editing you.md
+  you-md sync --check                      CI drift gate: exit 1 if exports are stale
 
 Documentation: https://github.com/briansparker/You
 `.trim();

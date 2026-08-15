@@ -20,6 +20,10 @@
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *
+ * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
+ * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
+ * See `you-md sync` for detecting and repairing drift after you.md edits.
  */
 
 import { readFile, writeFile, mkdir, copyFile, rename } from "node:fs/promises"
@@ -208,6 +212,61 @@ export async function exportToTarget(
 }
 
 // ---------------------------------------------------------------------------
+// CLAUDE.md -> AGENTS.md bridge
+// ---------------------------------------------------------------------------
+
+/**
+ * Claude Code reads CLAUDE.md, not AGENTS.md. The community fix is a symlink
+ * or an `@AGENTS.md` import line. We write the import line inside a managed
+ * block: it survives user edits around it, works on every platform, and
+ * keeps the project's AGENTS.md as the single source of truth.
+ */
+const BRIDGE_CONTENT = [
+  "@AGENTS.md",
+  "",
+  "<!-- The line above imports AGENTS.md so Claude Code reads the same",
+  "     instructions as every AGENTS.md-native tool. One source, no drift. -->",
+].join("\n")
+
+export interface BridgeResult {
+  path: string
+  action: "created" | "updated" | "none"
+}
+
+export function claudeBridgePath(paths?: ExportPaths): string {
+  return resolve(paths?.cwd ?? process.cwd(), "CLAUDE.md")
+}
+
+/**
+ * Ensure the project CLAUDE.md imports AGENTS.md.
+ *
+ * - CLAUDE.md already mentions @AGENTS.md anywhere (hand-rolled or ours): no-op.
+ * - CLAUDE.md exists without it: append/refresh a managed block with the import.
+ * - CLAUDE.md missing: create it with just the managed bridge block.
+ */
+export async function ensureClaudeBridge(paths?: ExportPaths): Promise<BridgeResult> {
+  const path = claudeBridgePath(paths)
+  const exists = existsSync(path)
+  const existing = exists ? await readFile(path, "utf-8") : null
+
+  if (existing !== null && existing.includes("@AGENTS.md")) {
+    return { path, action: "none" }
+  }
+
+  const next = applyManagedBlock(existing, buildManagedBlock(BRIDGE_CONTENT))
+
+  await mkdir(dirname(path), { recursive: true })
+  if (exists) {
+    await copyFile(path, path + ".backup")
+  }
+  const tmp = path + ".tmp"
+  await writeFile(tmp, next, "utf-8")
+  await rename(tmp, path)
+
+  return { path, action: exists ? "updated" : "created" }
+}
+
+// ---------------------------------------------------------------------------
 // Command
 // ---------------------------------------------------------------------------
 
@@ -296,6 +355,14 @@ export async function exportCommand(
       const { path, action } = await exportToTarget(target, prefs, paths, flags.output)
       if (!flags.quiet) {
         console.log(`✓ ${target.name.padEnd(22)} ${action}  ${path}`)
+      }
+      // Exporting a project AGENTS.md also bridges the project CLAUDE.md to
+      // it (via an @AGENTS.md import), so Claude Code reads the same content.
+      if (target.id === "agents" && !flags.output) {
+        const bridge = await ensureClaudeBridge(paths)
+        if (!flags.quiet && bridge.action !== "none") {
+          console.log(`✓ ${"CLAUDE.md bridge".padEnd(22)} ${bridge.action}  ${bridge.path}`)
+        }
       }
     } catch (err) {
       failures++

@@ -120,6 +120,10 @@ you-md convert .cursorrules -o .you.md
 you-md export --all               Export to every supported tool
 you-md export claude gemini       Export to specific tools
 you-md export --all --dry-run     Preview without writing
+
+# Keep exported files in sync after you edit your you.md
+you-md sync                       Refresh every previously exported file
+you-md sync --check               CI drift gate: exit 1 if anything is stale
 ```
 
 ### Library Usage
@@ -347,6 +351,39 @@ Exports are idempotent. Managed content lives between `<!-- you-md:begin -->` an
 and re-running `you-md export` updates the block in place. Existing files are backed
 up to `<file>.backup` before each write. The `cursor` target is the exception: it
 writes a dedicated `you-md.mdc` rule file that you-md owns entirely.
+
+Exporting `agents` also bridges the project `CLAUDE.md`: Claude Code doesn't read
+`AGENTS.md` natively, so you-md adds an `@AGENTS.md` import line (inside a managed
+block) to `./CLAUDE.md`. One source file, and Claude Code reads the same instructions
+as every AGENTS.md-native tool. If your `CLAUDE.md` already references `@AGENTS.md`,
+you-md leaves it alone.
+
+### `you-md sync`
+
+Detect and repair drift between your you.md and every file you've exported it into.
+This is the answer to the classic failure mode where `CLAUDE.md`, `AGENTS.md`, and
+`.cursor/rules` slowly diverge until an agent violates a rule that only exists in
+one of them.
+
+```bash
+you-md sync              # Refresh every previously exported file
+you-md sync --check      # Report drift, write nothing, exit 1 if anything is stale
+you-md sync --dry-run    # Preview what would change, always exit 0
+```
+
+`sync` only touches files that already carry you-md managed markers (or files
+you-md owns outright, like Cursor's rule file). It never creates new export
+targets on its own: run `you-md export <target>` first to add one. It also keeps
+the `CLAUDE.md` -> `AGENTS.md` bridge healthy whenever the project `AGENTS.md`
+is managed by you-md.
+
+`--check` is built for CI: add it as a step and the build fails whenever someone
+edits `you.md` without re-exporting (or hand-edits a managed block).
+
+```yaml
+# .github/workflows/ci.yml
+- run: npx -y -p @brainsparker/you-md you-md sync --check
+```
 
 ## API Reference
 
