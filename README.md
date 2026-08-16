@@ -585,6 +585,30 @@ The MCP server automatically loads your you.md preferences into Claude's context
 | `youmd://project` | Project-level .you.md |
 | `youmd://global` | Global ~/.you.md |
 
+## ChatGPT App
+
+`apps/chatgpt/` packages a ChatGPT plugin that turns the context ChatGPT already
+has about you into a you.md you own:
+
+```
+Create my you.md from what you know about me.
+→ ChatGPT writes the profile and shows it to you
+→ "Remove the location and add that I prefer direct answers."
+→ Export my you.md
+```
+
+ChatGPT does the synthesis; the remote MCP server validates the markdown against
+this package's parser, versions it, and hands it back. It never infers anything
+about you on its own, and profiles are private by default.
+
+```bash
+npm run build
+node bin/you-md-chatgpt.js       # remote MCP server on http://localhost:8787/mcp
+```
+
+See [`apps/chatgpt/README.md`](apps/chatgpt/README.md) for the tool surface,
+deployment, and skill evals.
+
 ## Requirements
 
 - Node.js >= 18.0.0
