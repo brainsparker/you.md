@@ -7,7 +7,8 @@
   "types": "dist/index.d.ts",
   "bin": {
     "you-md": "./bin/you-md.js",
-    "you-md-mcp": "./bin/you-md-mcp.js"
+    "you-md-mcp": "./bin/you-md-mcp.js",
+    "you-md-chatgpt": "./bin/you-md-chatgpt.js"
   },
   "exports": {
     ".": {
@@ -19,6 +20,11 @@
       "types": "./dist/mcp.d.ts",
       "import": "./dist/mcp.mjs",
       "require": "./dist/mcp.js"
+    },
+    "./chatgpt": {
+      "types": "./dist/chatgpt.d.ts",
+      "import": "./dist/chatgpt.mjs",
+      "require": "./dist/chatgpt.js"
     }
   },
   "files": [
@@ -35,6 +41,7 @@
     "prepublishOnly": "npm run build && npm run test",
     "eval:search": "npx tsx eval/search_eval.ts",
     "eval:agent": "npx tsx eval/agent_eval.ts",
+    "eval:chatgpt": "npx tsx eval/chatgpt/run.ts",
     "eval": "npm run eval:search && npm run eval:agent"
   },
   "keywords": [

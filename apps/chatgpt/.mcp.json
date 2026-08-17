@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "you-md": {
+      "type": "http",
+      "url": "https://mcp.you.md/mcp"
+    }
+  }
+}

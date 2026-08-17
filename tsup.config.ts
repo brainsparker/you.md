@@ -5,6 +5,8 @@ export default defineConfig({
     index: "src/index.ts",
     cli: "src/cli/index.ts",
     mcp: "src/mcp/index.ts",
+    chatgpt: "src/chatgpt/index.ts",
+    "chatgpt-serve": "src/chatgpt/serve.ts",
   },
   format: ["cjs", "esm"],
   dts: true,

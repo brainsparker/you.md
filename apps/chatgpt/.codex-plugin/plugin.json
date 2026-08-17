@@ -1,0 +1,36 @@
+{
+  "name": "you-md",
+  "version": "0.1.0",
+  "description": "Turn what ChatGPT already knows about you into a portable you.md profile you own and can take to any AI tool.",
+  "author": {
+    "name": "brainsparker",
+    "url": "https://github.com/brainsparker/you.md"
+  },
+  "homepage": "https://github.com/brainsparker/you.md",
+  "repository": "https://github.com/brainsparker/you.md/tree/main/apps/chatgpt",
+  "license": "MIT",
+  "keywords": [
+    "you.md",
+    "profile",
+    "memory",
+    "portability",
+    "personalization",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "you.md",
+    "shortDescription": "Own the context AI has about you",
+    "longDescription": "you.md turns the context ChatGPT has accumulated about you into a portable profile file. Ask ChatGPT to create your you.md, review what it wrote, correct anything that is wrong, and export the file to use in other AI tools. Your profile is private by default, stored as plain markdown, and never shared with anyone else.",
+    "developerName": "brainsparker",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/brainsparker/you.md",
+    "defaultPrompt": [
+      "Create my you.md from what you know about me",
+      "Show me my you.md",
+      "Export my you.md"
+    ]
+  }
+}
