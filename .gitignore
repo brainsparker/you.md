@@ -28,3 +28,7 @@ npm-debug.log*
 # Test artifacts
 *.tmp
 DISTRIBUTION_PLAN.md
+
+# Guard against a stray symlink named node_modules (the trailing-slash
+# pattern above only matches directories).
+/node_modules
