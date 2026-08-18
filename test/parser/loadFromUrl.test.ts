@@ -203,6 +203,9 @@ describe("loadFromUrl SSRF guard", () => {
     "https://[fe80::1]/profile.md",
     "https://[::ffff:127.0.0.1]/profile.md",
     "https://[::ffff:192.168.1.1]/profile.md",
+    "https://[::127.0.0.1]/profile.md",
+    "https://[::10.0.0.5]/profile.md",
+    "https://[64:ff9b::127.0.0.1]/profile.md",
     "https://printer.local/profile.md",
     "https://db.prod.internal/profile.md",
   ];
@@ -232,6 +235,8 @@ describe("loadFromUrl SSRF guard", () => {
     "https://100.63.0.1/profile.md",
     "https://100.128.0.1/profile.md",
     "https://mylocal.example.com/profile.md",
+    "https://[2606:4700::1111]/profile.md",
+    "https://[64:ff9b::93.184.216.34]/profile.md",
   ];
 
   it.each(allowedUrls)("allows %s through to fetch", async (url) => {

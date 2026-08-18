@@ -87,9 +87,16 @@ export function isDisallowedRemoteHostname(rawHostname: string): boolean {
     if (/^fe[89ab]/.test(hostname)) {
       return true; // fe80::/10 link-local
     }
-    // IPv4-mapped IPv6: check the embedded IPv4 address against v4 ranges.
-    if (hostname.startsWith("::ffff:")) {
-      const rest = hostname.slice("::ffff:".length);
+    // Prefixes that embed an IPv4 address in the low 32 bits, all of which
+    // reach that IPv4 target: ::ffff:x/96 (mapped), ::x/96 (IPv4-compatible,
+    // deprecated but still routed to loopback by common stacks), and
+    // 64:ff9b::x/96 (NAT64). Check the embedded IPv4 against the v4 ranges.
+    // Order matters: the longer prefixes must be tested before bare "::".
+    const embeddedPrefix = ["::ffff:", "64:ff9b::", "::"].find((prefix) =>
+      hostname.startsWith(prefix)
+    );
+    if (embeddedPrefix !== undefined) {
+      const rest = hostname.slice(embeddedPrefix.length);
       if (isIP(rest) === 4) {
         return ipv4IsPrivate(rest.split(".").map(Number));
       }
@@ -101,7 +108,7 @@ export function isDisallowedRemoteHostname(rawHostname: string): boolean {
           return ipv4IsPrivate([hi >> 8, hi & 0xff, lo >> 8, lo & 0xff]);
         }
       }
-      return true; // unparseable mapped form: refuse rather than guess
+      return true; // unparseable embedded form: refuse rather than guess
     }
   }
 
