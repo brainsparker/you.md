@@ -177,3 +177,96 @@ describe("loadFromUrl hardening", () => {
     expect(setTimeoutSpy.mock.calls[0]?.[1]).toBe(MAX_FETCH_TIMEOUT);
   });
 });
+
+describe("loadFromUrl SSRF guard", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const blockedUrls = [
+    "https://127.0.0.1/profile.md",
+    "https://127.8.9.10/profile.md",
+    "https://localhost/profile.md",
+    "https://sub.localhost/profile.md",
+    "https://localhost.localdomain/profile.md",
+    "https://10.0.0.5/profile.md",
+    "https://100.64.1.1/profile.md",
+    "https://172.16.0.1/profile.md",
+    "https://172.31.255.255/profile.md",
+    "https://192.168.1.1/profile.md",
+    "https://169.254.169.254/profile.md",
+    "https://0.0.0.0/profile.md",
+    "https://[::1]/profile.md",
+    "https://[::]/profile.md",
+    "https://[fc00::1]/profile.md",
+    "https://[fd12:3456::1]/profile.md",
+    "https://[fe80::1]/profile.md",
+    "https://[::ffff:127.0.0.1]/profile.md",
+    "https://[::ffff:192.168.1.1]/profile.md",
+    "https://[::127.0.0.1]/profile.md",
+    "https://[::10.0.0.5]/profile.md",
+    "https://[64:ff9b::127.0.0.1]/profile.md",
+    "https://printer.local/profile.md",
+    "https://db.prod.internal/profile.md",
+  ];
+
+  it.each(blockedUrls)("rejects %s before any network fetch", async (url) => {
+    const parser = createParser();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const result = await parser.loadFromUrl(url);
+
+    expect(result.success).toBe(false);
+    expect(result.errors.some((e) => e.code === "NETWORK_ERROR")).toBe(true);
+    expect(
+      result.errors.some((e) =>
+        e.message.includes("local or private network")
+      )
+    ).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  const allowedUrls = [
+    "https://example.com/profile.md",
+    "https://raw.githubusercontent.com/user/repo/main/you.md",
+    "https://11.22.33.44/profile.md",
+    "https://172.15.0.1/profile.md",
+    "https://172.32.0.1/profile.md",
+    "https://100.63.0.1/profile.md",
+    "https://100.128.0.1/profile.md",
+    "https://mylocal.example.com/profile.md",
+    "https://[2606:4700::1111]/profile.md",
+    "https://[64:ff9b::93.184.216.34]/profile.md",
+  ];
+
+  it.each(allowedUrls)("allows %s through to fetch", async (url) => {
+    const parser = createParser();
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: { get: () => null },
+      body: null,
+      text: vi.fn(async () => '---\nschema_version: "1.1"\n---\n\n# Me\n'),
+    } as unknown as Response);
+
+    const result = await parser.loadFromUrl(url);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects IPv6 addresses that canonicalize to loopback", async () => {
+    const parser = createParser();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    // WHATWG URL canonicalizes the expanded form to ::1
+    const result = await parser.loadFromUrl(
+      "https://[0:0:0:0:0:0:0:1]/profile.md"
+    );
+
+    expect(result.success).toBe(false);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
