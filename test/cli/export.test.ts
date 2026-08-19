@@ -95,6 +95,27 @@ describe("resolveTargetPath", () => {
     const path = resolveTargetPath(target("agents"), { home, cwd });
     expect(path).toBe(join(cwd, "AGENTS.md"));
   });
+
+  it("resolves copilot to the repo's .github instructions file", () => {
+    const path = resolveTargetPath(target("copilot"), { home, cwd });
+    expect(path).toBe(join(cwd, ".github", "copilot-instructions.md"));
+  });
+
+  it("resolves opencode under the user config dir", () => {
+    const path = resolveTargetPath(target("opencode"), { home, cwd });
+    expect(path).toBe(join(home, ".config", "opencode", "AGENTS.md"));
+  });
+
+  it("resolves cline to the .clinerules file by default", () => {
+    const path = resolveTargetPath(target("cline"), { home, cwd });
+    expect(path).toBe(join(cwd, ".clinerules"));
+  });
+
+  it("falls back to a file inside .clinerules when it exists as a directory", () => {
+    mkdirSync(join(cwd, ".clinerules"), { recursive: true });
+    const path = resolveTargetPath(target("cline"), { home, cwd });
+    expect(path).toBe(join(cwd, ".clinerules", "you-md.md"));
+  });
 });
 
 describe("exportToTarget", () => {
@@ -166,12 +187,67 @@ describe("exportToTarget", () => {
     expect(path).toBe(override);
     expect(readFileSync(path, "utf-8")).toContain("Short sentences.");
   });
+
+  it("exports copilot as a managed block that preserves existing repo instructions", async () => {
+    const path = join(cwd, ".github", "copilot-instructions.md");
+    mkdirSync(join(cwd, ".github"), { recursive: true });
+    writeFileSync(path, "# Repo standards\n\nUse tabs.\n", "utf-8");
+
+    const result = await exportToTarget(target("copilot"), prefs, { home, cwd });
+
+    expect(result.path).toBe(path);
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain("Use tabs.");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+  });
+
+  it("writes roo exports as a whole owned rule file", async () => {
+    const { path } = await exportToTarget(target("roo"), prefs, { home, cwd });
+
+    expect(path).toBe(join(cwd, ".roo", "rules", "you-md.md"));
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain("Managed by you-md");
+    expect(content).toContain("Short sentences.");
+    expect(content).not.toContain(BEGIN_MARKER);
+  });
+
+  it("writes into .clinerules/you-md.md when the folder form is in use", async () => {
+    mkdirSync(join(cwd, ".clinerules"), { recursive: true });
+
+    const { path, action } = await exportToTarget(target("cline"), prefs, { home, cwd });
+
+    expect(action).toBe("created");
+    expect(path).toBe(join(cwd, ".clinerules", "you-md.md"));
+    expect(readFileSync(path, "utf-8")).toContain("Short sentences.");
+  });
+
+  it("exports zed as a managed block in the project .rules file", async () => {
+    const { path } = await exportToTarget(target("zed"), prefs, { home, cwd });
+
+    expect(path).toBe(join(cwd, ".rules"));
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+  });
 });
 
 describe("EXPORT_TARGETS", () => {
   it("covers the expected tools", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
-    expect(ids).toEqual(["agents", "claude", "codex", "cursor", "gemini", "windsurf"]);
+    expect(ids).toEqual([
+      "agents",
+      "claude",
+      "cline",
+      "codex",
+      "copilot",
+      "cursor",
+      "gemini",
+      "opencode",
+      "roo",
+      "windsurf",
+      "zed",
+    ]);
   });
 
   it("has unique ids and paths", () => {

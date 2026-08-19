@@ -18,8 +18,17 @@
  *   codex      Codex CLI global guidance        ~/.codex/AGENTS.md
  *   gemini     Gemini CLI global context        ~/.gemini/GEMINI.md
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
+ *   opencode   OpenCode global guidance         ~/.config/opencode/AGENTS.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
+ *   copilot    GitHub Copilot repo instructions ./.github/copilot-instructions.md
+ *   cline      Cline project rules              ./.clinerules
+ *   zed        Zed project rules                ./.rules
+ *   roo        Roo Code project rule            ./.roo/rules/you-md.md
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *
+ * Cline supports either a single .clinerules file or a .clinerules/ folder of
+ * rule files. When the folder form is already in use, the cline target writes
+ * .clinerules/you-md.md inside it instead of failing on the directory.
  *
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
@@ -27,7 +36,7 @@
  */
 
 import { readFile, writeFile, mkdir, copyFile, rename } from "node:fs/promises"
-import { existsSync } from "node:fs"
+import { existsSync, statSync } from "node:fs"
 import { resolve, dirname } from "node:path"
 import { homedir } from "node:os"
 
@@ -95,6 +104,12 @@ export interface ExportTarget {
   mode: "managed-block" | "own-file"
   /** Render the final file (own-file) or block content (managed-block) */
   render: (prefs: string) => string
+  /**
+   * Some tools accept either a file or a directory at the primary path
+   * (e.g. Cline's .clinerules). When the primary path exists as a directory,
+   * resolve to this file inside it instead of failing on the directory.
+   */
+  dirFallbackRelPath?: string[]
 }
 
 export const EXPORT_TARGETS: ExportTarget[] = [
@@ -131,6 +146,14 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     render: prefs => prefs,
   },
   {
+    id: "opencode",
+    name: "OpenCode",
+    scope: "user",
+    relPath: [".config", "opencode", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
     id: "cursor",
     name: "Cursor",
     scope: "project",
@@ -148,6 +171,39 @@ export const EXPORT_TARGETS: ExportTarget[] = [
         prefs.trimEnd(),
         "",
       ].join("\n"),
+  },
+  {
+    id: "copilot",
+    name: "GitHub Copilot",
+    scope: "project",
+    relPath: [".github", "copilot-instructions.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "cline",
+    name: "Cline",
+    scope: "project",
+    relPath: [".clinerules"],
+    mode: "managed-block",
+    render: prefs => prefs,
+    dirFallbackRelPath: ["you-md.md"],
+  },
+  {
+    id: "zed",
+    name: "Zed",
+    scope: "project",
+    relPath: [".rules"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "roo",
+    name: "Roo Code",
+    scope: "project",
+    relPath: [".roo", "rules", "you-md.md"],
+    mode: "own-file",
+    render: prefs => [MANAGED_NOTE, "", prefs.trimEnd(), ""].join("\n"),
   },
   {
     id: "agents",
@@ -169,7 +225,20 @@ export interface ExportPaths {
 
 export function resolveTargetPath(target: ExportTarget, paths?: ExportPaths): string {
   const base = target.scope === "user" ? (paths?.home ?? homedir()) : (paths?.cwd ?? process.cwd())
-  return resolve(base, ...target.relPath)
+  const primary = resolve(base, ...target.relPath)
+
+  // Tools like Cline accept either a file or a directory at the primary path.
+  // When the directory form is in use, write our own file inside it rather
+  // than failing on (or clobbering) the directory.
+  if (
+    target.dirFallbackRelPath &&
+    existsSync(primary) &&
+    statSync(primary).isDirectory()
+  ) {
+    return resolve(primary, ...target.dirFallbackRelPath)
+  }
+
+  return primary
 }
 
 // ---------------------------------------------------------------------------

@@ -105,6 +105,11 @@ There are two ways to connect a profile:
 | Windsurf | `windsurf` | `windsurf` → global rules |
 | Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
 | Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
+| GitHub Copilot | — | `copilot` → `./.github/copilot-instructions.md` |
+| Cline | — | `cline` → `./.clinerules` |
+| Zed | — | `zed` → `./.rules` |
+| Roo Code | — | `roo` → `./.roo/rules/you-md.md` |
+| OpenCode | — | `opencode` → `~/.config/opencode/AGENTS.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
 
 Install MCP into all detected tools or choose one explicitly:
