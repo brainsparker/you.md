@@ -18,8 +18,10 @@
  *   codex      Codex CLI global guidance        ~/.codex/AGENTS.md
  *   gemini     Gemini CLI global context        ~/.gemini/GEMINI.md
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
+ *   copilot    Copilot CLI personal file        ~/.copilot/copilot-instructions.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *   copilot-repo  Copilot repo instructions     ./.github/copilot-instructions.md
  *
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
@@ -131,6 +133,18 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     render: prefs => prefs,
   },
   {
+    // Personal instructions for GitHub Copilot CLI. Copilot CLI reads
+    // ~/.copilot/copilot-instructions.md across every repository, and it is
+    // the one Copilot surface that does not read AGENTS.md, so the generic
+    // `agents` target cannot reach it.
+    id: "copilot",
+    name: "Copilot CLI",
+    scope: "user",
+    relPath: [".copilot", "copilot-instructions.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
     id: "cursor",
     name: "Cursor",
     scope: "project",
@@ -154,6 +168,19 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     name: "Project AGENTS.md",
     scope: "project",
     relPath: ["AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // Repository-wide instructions for GitHub Copilot. This file is read by
+    // Copilot Chat (VS Code and GitHub.com), Copilot code review, the Copilot
+    // coding agent, and Copilot CLI, and it is the highest-adherence Copilot
+    // instruction file. GitHub.com Copilot Chat does not read AGENTS.md, so
+    // this target covers surfaces the `agents` target cannot.
+    id: "copilot-repo",
+    name: "Copilot (repo-wide)",
+    scope: "project",
+    relPath: [".github", "copilot-instructions.md"],
     mode: "managed-block",
     render: prefs => prefs,
   },
@@ -271,9 +298,10 @@ export async function ensureClaudeBridge(paths?: ExportPaths): Promise<BridgeRes
 // ---------------------------------------------------------------------------
 
 function helpText(): string {
+  const idWidth = Math.max(...EXPORT_TARGETS.map(t => t.id.length)) + 2
   const rows = EXPORT_TARGETS.map(t => {
     const loc = (t.scope === "user" ? "~/" : "./") + t.relPath.join("/")
-    return `  ${t.id.padEnd(10)} ${t.name.padEnd(22)} ${loc}`
+    return `  ${t.id.padEnd(idWidth)} ${t.name.padEnd(22)} ${loc}`
   }).join("\n")
 
   return `you-md export: write your preferences into each tool's native instruction file

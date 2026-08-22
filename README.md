@@ -105,6 +105,8 @@ There are two ways to connect a profile:
 | Windsurf | `windsurf` | `windsurf` → global rules |
 | Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
 | Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
+| GitHub Copilot CLI | — | `copilot` → `~/.copilot/copilot-instructions.md` |
+| GitHub Copilot (Chat, code review, coding agent) | — | `copilot-repo` → `./.github/copilot-instructions.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
 
 Install MCP into all detected tools or choose one explicitly:
@@ -119,13 +121,15 @@ Export to native instruction files when MCP is unavailable or when you want the 
 
 ```bash
 you-md export --all
-you-md export claude codex gemini
+you-md export claude codex gemini copilot
 you-md export --all --dry-run
 ```
 
 Exports are idempotent. In shared files, `you.md` owns only the content between `<!-- you-md:begin -->` and `<!-- you-md:end -->`; everything outside those markers is preserved. Existing files are backed up before writes. The Cursor target is a dedicated file owned by `you.md`.
 
 Exporting the `agents` target also adds an `@AGENTS.md` bridge to the project's `CLAUDE.md`, so Claude Code and AGENTS.md-aware tools can share one source of project instructions.
+
+The two Copilot targets are complementary. `copilot` writes the personal instructions file Copilot CLI reads in every repository (Copilot CLI does not read `AGENTS.md`, so the `agents` target cannot reach it). `copilot-repo` writes the repository-wide `.github/copilot-instructions.md`, the highest-adherence instruction file across Copilot Chat, code review, and the coding agent. Since the repo file is shared with your team, prefer a project-local `.you.md` over your personal profile when exporting it.
 
 ## Keep every tool in sync
 
