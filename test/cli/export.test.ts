@@ -95,6 +95,16 @@ describe("resolveTargetPath", () => {
     const path = resolveTargetPath(target("agents"), { home, cwd });
     expect(path).toBe(join(cwd, "AGENTS.md"));
   });
+
+  it("resolves the copilot CLI target to the user-level instructions file", () => {
+    const path = resolveTargetPath(target("copilot"), { home, cwd });
+    expect(path).toBe(join(home, ".copilot", "copilot-instructions.md"));
+  });
+
+  it("resolves the copilot-repo target to .github/copilot-instructions.md", () => {
+    const path = resolveTargetPath(target("copilot-repo"), { home, cwd });
+    expect(path).toBe(join(cwd, ".github", "copilot-instructions.md"));
+  });
 });
 
 describe("exportToTarget", () => {
@@ -159,6 +169,35 @@ describe("exportToTarget", () => {
     expect(content).not.toContain("old prefs");
   });
 
+  it("preserves existing repo instructions when exporting copilot-repo", async () => {
+    const path = join(cwd, ".github", "copilot-instructions.md");
+    mkdirSync(join(cwd, ".github"), { recursive: true });
+    writeFileSync(
+      path,
+      "# Project build instructions\n\nRun npm test before committing.\n",
+      "utf-8"
+    );
+
+    const { action } = await exportToTarget(target("copilot-repo"), prefs, { home, cwd });
+    expect(action).toBe("updated");
+
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain("Run npm test before committing.");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+    expect(content.split(BEGIN_MARKER).length).toBe(2);
+  });
+
+  it("creates the copilot CLI file under ~/.copilot", async () => {
+    const { path, action } = await exportToTarget(target("copilot"), prefs, { home, cwd });
+
+    expect(action).toBe("created");
+    expect(path).toBe(join(home, ".copilot", "copilot-instructions.md"));
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+  });
+
   it("respects an output path override", async () => {
     const override = join(tempDir, "custom", "out.md");
     const { path } = await exportToTarget(target("gemini"), prefs, { home, cwd }, override);
@@ -171,7 +210,16 @@ describe("exportToTarget", () => {
 describe("EXPORT_TARGETS", () => {
   it("covers the expected tools", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
-    expect(ids).toEqual(["agents", "claude", "codex", "cursor", "gemini", "windsurf"]);
+    expect(ids).toEqual([
+      "agents",
+      "claude",
+      "codex",
+      "copilot",
+      "copilot-repo",
+      "cursor",
+      "gemini",
+      "windsurf",
+    ]);
   });
 
   it("has unique ids and paths", () => {
