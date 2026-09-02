@@ -54,7 +54,27 @@ export type { ParseResult, ParseError, ParseWarning } from "./types/parser";
 // Core functions
 export { discoverProfilePath, getDefaultSearchPaths } from "./core/discovery";
 export { mergeProfiles } from "./core/merger";
-export { validateProfile, isValidProfile } from "./core/validator";
+export {
+  validateProfile,
+  isValidProfile,
+  getSecurityWarnings,
+  SECURITY_WARNING_CODES,
+} from "./core/validator";
+
+// Instruction-file injection scanner
+export {
+  scanForInjection,
+  formatInjectionFindings,
+  hasHighSeverityFindings,
+  INJECTION_RULES,
+  INJECTION_ALLOW_MARKER,
+} from "./core/injection";
+export type {
+  InjectionFinding,
+  InjectionCategory,
+  InjectionSeverity,
+  InjectionScanOptions,
+} from "./core/injection";
 
 // Personalization signal extraction
 export {

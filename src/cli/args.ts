@@ -69,6 +69,9 @@ export interface CliFlags {
 
   /** Report drift without writing, exit 1 if any (sync) */
   check?: boolean;
+
+  /** Treat security warnings (possible injection, sensitive data) as failures */
+  strict?: boolean;
 }
 
 /**
@@ -92,6 +95,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     all: { type: "boolean" as const },
     "dry-run": { type: "boolean" as const },
     check: { type: "boolean" as const },
+    strict: { type: "boolean" as const },
   };
 
   try {
@@ -131,6 +135,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         all: values.all,
         dryRun: values["dry-run"],
         check: values.check,
+        strict: values.strict,
       },
     };
   } catch (error) {
@@ -195,6 +200,8 @@ Options:
   --all                    Export to all supported targets
   --dry-run                Preview export/sync without writing files
   --check                  Sync: report drift without writing, exit 1 if any
+  --strict                 Validate/export/sync: fail on security warnings
+                           (possible prompt injection or sensitive data)
 
 Examples:
   you-md skill install                     Install into all detected AI tools
@@ -205,6 +212,7 @@ Examples:
   you-md init -f developer .you.md         Create developer-focused profile
   you-md init -f signals prefs.md          Create full personalization signals
   you-md validate ./you.md                 Validate a file
+  you-md validate --strict shared.you.md   Fail if a profile carries injection-shaped text
   you-md merge ~/.you.md ./.you.md         Merge user and project profiles
   you-md convert .cursorrules              Convert .cursorrules to you.md
   you-md export claude gemini              Export to Claude Code and Gemini CLI

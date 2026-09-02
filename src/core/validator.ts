@@ -9,6 +9,23 @@ import {
   KNOWN_SECTIONS,
   SENSITIVE_PATTERNS,
 } from "../utils/constants";
+import { scanForInjection } from "./injection";
+
+/**
+ * Warning codes that describe a security concern rather than a schema or
+ * style issue. `you-md validate --strict` fails when any of these appear.
+ */
+export const SECURITY_WARNING_CODES: readonly ValidationWarning["code"][] = [
+  "POSSIBLE_SENSITIVE_DATA",
+  "POSSIBLE_INJECTION",
+];
+
+/**
+ * Return only the security-relevant warnings from a validation result.
+ */
+export function getSecurityWarnings(result: ValidationResult): ValidationWarning[] {
+  return result.warnings.filter((w) => SECURITY_WARNING_CODES.includes(w.code));
+}
 
 /**
  * Validate a you.md profile against schema requirements.
@@ -28,6 +45,9 @@ export function validateProfile(profile: YouMdProfile): ValidationResult {
 
   // Check for sensitive data
   checkSensitiveData(profile, warnings);
+
+  // Check for instruction-file poisoning patterns
+  checkInjection(profile, warnings);
 
   // Check metadata fields
   validateMetadata(profile, errors, warnings);
@@ -148,6 +168,32 @@ function checkSensitiveData(
           "Review the content and ensure no secrets, API keys, or credentials are included",
       });
     }
+  }
+}
+
+/**
+ * Check for text that would turn the profile into a hostile instruction
+ * file once it reaches an agent's context: authority overrides, concealment,
+ * exfiltration, endpoint or permission overrides, hidden content, remote
+ * instruction loading, and piped execution.
+ *
+ * Reported as warnings, never errors, so a false positive cannot make a
+ * personal profile unusable. `you-md validate --strict` promotes them.
+ */
+function checkInjection(
+  profile: YouMdProfile,
+  warnings: ValidationWarning[]
+): void {
+  const findings = scanForInjection(profile.rawContent);
+
+  for (const finding of findings) {
+    const severity = finding.severity === "high" ? "high" : "medium";
+    warnings.push({
+      code: "POSSIBLE_INJECTION",
+      message: `${finding.ruleId} (${severity}, ${finding.category}) line ${finding.line}: "${finding.excerpt}"`,
+      line: finding.line,
+      suggestion: `${finding.message} If this line is intentional, add <!-- you-md:allow-injection --> to it, or alone on the line above it.`,
+    });
   }
 }
 
