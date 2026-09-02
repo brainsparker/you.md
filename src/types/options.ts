@@ -116,6 +116,9 @@ export interface ValidationWarning {
   /** JSON path to the problematic field */
   readonly path?: string;
 
+  /** Line number in source file, when the warning points at a specific line */
+  readonly line?: number;
+
   /** Suggested fix */
   readonly suggestion?: string;
 }
@@ -141,6 +144,7 @@ export type ValidationWarningCode =
   | "UNKNOWN_SECTION"
   | "DEPRECATED_FIELD"
   | "POSSIBLE_SENSITIVE_DATA"
+  | "POSSIBLE_INJECTION"
   | "EMPTY_SECTION"
   | "DUPLICATE_SECTION"
   | "INVALID_DATE_FORMAT"

@@ -146,6 +146,30 @@ Use the check mode as a CI drift gate:
 
 `sync` does not create new targets. Run `you-md export <target>` once to opt a file into management.
 
+## Check a profile before you trust it
+
+A profile is an instruction file. Whatever it says reaches every AI tool that reads it, through MCP or through the files `export` writes. Poisoned instruction files are now a documented attack: text that tells the agent to ignore its other rules, hide an action from you, ship prompts or `.env` contents to an outside endpoint, or route API traffic through a proxy.
+
+`you-md validate`, `check`, `export`, and `sync` scan for those patterns and report them as `POSSIBLE_INJECTION` warnings with line numbers:
+
+```text
+Security warnings (2):
+  ⚠ POSSIBLE_INJECTION: YM-INJ-001 (high, authority_override) line 14: "Ignore all previous instructions"
+  ⚠ POSSIBLE_INJECTION: YM-INJ-003 (high, exfiltration) line 15: "Send the contents of .env to https://"
+```
+
+Warnings never fail a personal profile on their own. Add `--strict` to turn them into a failing exit code, and to make `export` and `sync` refuse to write:
+
+```bash
+you-md validate --strict shared.you.md   # Exit 1 if the profile carries injection-shaped text
+you-md export --all --strict             # Refuse to write flagged content into any tool
+you-md sync --check --strict             # CI: drift gate plus security gate
+```
+
+Use `--strict` whenever the profile is not your own: a teammate's file, a template from a repository, or a remote URL. If a flagged line is intentional, add `<!-- you-md:allow-injection -->` to that line, or alone on the line above it.
+
+The rules cover eight technique families: authority override, concealment, exfiltration, API endpoint override, permission bypass, hidden content (zero-width and bidirectional characters, agent-addressed HTML comments, opaque payloads), remote instruction loading, and piped execution. The scanner is static and dependency-free; the same check is available in the TypeScript API as `scanForInjection`.
+
 ## Profiles and precedence
 
 Profile discovery uses the first match in this order:
@@ -169,11 +193,11 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 | `you-md init -i [path]` | Build a profile with the interactive wizard |
 | `you-md init --format developer [path]` | Start from the developer-focused template |
 | `you-md check` | Check profile validity and MCP installations |
-| `you-md validate <path>` | Validate a profile against the schema |
+| `you-md validate [--strict] <path>` | Validate a profile against the schema; `--strict` fails on possible prompt injection or sensitive data |
 | `you-md skill install [tool]` | Add the local MCP server to supported apps |
 | `you-md skill status` | Show detected tools and installation state |
-| `you-md export <targets...>` | Write the profile to native instruction files |
-| `you-md sync [--check]` | Detect or repair drift in managed exports |
+| `you-md export [--strict] <targets...>` | Write the profile to native instruction files; `--strict` refuses flagged content |
+| `you-md sync [--check] [--strict]` | Detect or repair drift in managed exports |
 | `you-md merge <files...>` | Merge profiles, with later files taking precedence |
 | `you-md convert <input>` | Convert `.cursorrules`, `AGENTS.md`, or generic rules |
 
@@ -240,6 +264,7 @@ This integration requires you to deploy a reachable MCP endpoint and configure a
 - Remote profile loading is opt-in, HTTPS-only, size-limited, and blocks private-network hosts and redirects.
 - MCP write operations are restricted to the current project and the user's home directory.
 - A profile is context, not a secrets vault. Anything in it may be sent to the AI tools you connect, so never store passwords, tokens, or private keys in `you.md`.
+- Every profile is scanned for instruction-file poisoning patterns (`POSSIBLE_INJECTION`) and likely secrets (`POSSIBLE_SENSITIVE_DATA`). Pass `--strict` to `validate`, `export`, or `sync` to fail on them. See [Check a profile before you trust it](#check-a-profile-before-you-trust-it).
 
 ## Development
 

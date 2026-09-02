@@ -33,6 +33,7 @@ import { homedir } from "node:os"
 
 import { createParser } from "../../parser/index.js"
 import { formatProfileForContext, type FormattableProfile } from "../../core/formatter.js"
+import { runSecurityGate } from "../security.js"
 import type { CliFlags } from "../args.js"
 
 // ---------------------------------------------------------------------------
@@ -330,6 +331,16 @@ export async function exportCommand(
     console.error("Create one with: you-md init -i")
     return 1
   }
+
+  // Security gate: the profile is about to be written into files every
+  // connected AI tool reads at startup. Warn on injection-shaped text or
+  // sensitive data; refuse under --strict.
+  const gate = runSecurityGate(result.profile, {
+    strict: flags.strict,
+    quiet: flags.quiet,
+    action: "export",
+  })
+  if (gate.blocked) return 1
 
   const prefs = formatProfileForContext(result.profile as FormattableProfile)
 

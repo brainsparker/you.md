@@ -24,6 +24,7 @@ import { existsSync } from "node:fs"
 
 import { createParser } from "../../parser/index.js"
 import { formatProfileForContext, type FormattableProfile } from "../../core/formatter.js"
+import { runSecurityGate } from "../security.js"
 import type { CliFlags } from "../args.js"
 import {
   BEGIN_MARKER,
@@ -141,6 +142,14 @@ export async function syncCommand(
     console.error("Create one with: you-md init -i")
     return 1
   }
+
+  // Security gate: same check as export, since sync rewrites the same files.
+  const gate = runSecurityGate(result.profile, {
+    strict: flags.strict,
+    quiet: flags.quiet,
+    action: "sync",
+  })
+  if (gate.blocked) return 1
 
   const prefs = formatProfileForContext(result.profile as FormattableProfile)
 
