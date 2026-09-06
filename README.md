@@ -36,6 +36,19 @@ you-md check
 
 Restart the connected apps. They can now retrieve your profile through MCP.
 
+Already have preferences written into `CLAUDE.md`, `GEMINI.md`, Copilot instructions, or Cursor rules? Start from those instead of a blank template:
+
+```bash
+# See which instruction files are on this machine and what they would contribute
+you-md import --dry-run
+
+# Build ~/.you.md from every user-level instruction file, duplicates removed
+you-md import -o ~/.you.md
+
+# Later: pull in anything new without touching what you already wrote
+you-md import -o ~/.you.md --merge
+```
+
 > The npm package is `@brainsparker/you-md`. The unscoped `youmd` package is an unrelated project.
 
 Prefer not to install globally? Prefix commands with `npx -y -p @brainsparker/you-md`, for example:
@@ -127,6 +140,17 @@ Exports are idempotent. In shared files, `you.md` owns only the content between 
 
 Exporting the `agents` target also adds an `@AGENTS.md` bridge to the project's `CLAUDE.md`, so Claude Code and AGENTS.md-aware tools can share one source of project instructions.
 
+### Importing what you already have
+
+`you-md import` is the reverse direction: it reads the instruction files other tools already load and consolidates them into one profile.
+
+| Scope | Files read |
+| --- | --- |
+| User-level (default) | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md`, Windsurf global rules, `~/.copilot/copilot-instructions.md`, `~/.junie/AGENTS.md`, `~/.config/zed/AGENTS.md`, `~/.config/opencode/AGENTS.md`, `~/.kiro/steering/*.md` |
+| Project-level (`--all`) | `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*.mdc`, `.windsurfrules`, `.clinerules`, `.roo/rules/*.md`, `.github/copilot-instructions.md`, `.kiro/steering/*.md`, `.junie/guidelines.md` |
+
+Headings in the source files decide where content lands (`Don't` becomes Boundaries, `Communication` becomes How I Communicate, coding conventions become How I Work), prohibitions under generic headings move to Boundaries, and the same line written in two tools is kept once. Each block carries a `<!-- imported from ... -->` note so you can see where it came from. Content between `you-md` markers is skipped, so importing after exporting never loops. Use `--merge` to add only what an existing profile is missing, `--dry-run` to preview, and `--json` for a machine-readable report.
+
 ## Keep every tool in sync
 
 After editing your profile, refresh only the targets you have already exported:
@@ -175,7 +199,8 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 | `you-md export <targets...>` | Write the profile to native instruction files |
 | `you-md sync [--check]` | Detect or repair drift in managed exports |
 | `you-md merge <files...>` | Merge profiles, with later files taking precedence |
-| `you-md convert <input>` | Convert `.cursorrules`, `AGENTS.md`, or generic rules |
+| `you-md import [files...]` | Build or extend a profile from the instruction files you already have |
+| `you-md convert <input>` | Convert one instruction file to you.md (alias of `import <file>`) |
 
 Run `you-md --help` for every option.
 
