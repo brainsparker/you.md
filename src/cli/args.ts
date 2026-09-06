@@ -9,6 +9,7 @@ export type Command =
   | "validate"
   | "merge"
   | "convert"
+  | "import"
   | "export"
   | "sync"
   | "skill"
@@ -69,6 +70,9 @@ export interface CliFlags {
 
   /** Report drift without writing, exit 1 if any (sync) */
   check?: boolean;
+
+  /** Add to an existing profile instead of replacing it (import) */
+  merge?: boolean;
 }
 
 /**
@@ -92,6 +96,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     all: { type: "boolean" as const },
     "dry-run": { type: "boolean" as const },
     check: { type: "boolean" as const },
+    merge: { type: "boolean" as const },
   };
 
   try {
@@ -131,6 +136,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         all: values.all,
         dryRun: values["dry-run"],
         check: values.check,
+        merge: values.merge,
       },
     };
   } catch (error) {
@@ -152,6 +158,7 @@ function isValidCommand(cmd: string): cmd is Command {
     "validate",
     "merge",
     "convert",
+    "import",
     "export",
     "sync",
     "skill",
@@ -176,7 +183,8 @@ Commands:
   init [path]              Create a new you.md file (default: ./.you.md)
   validate <path>          Validate a you.md file
   merge <paths...>         Merge multiple you.md files
-  convert <input>          Convert from other formats (.cursorrules, etc.)
+  import [files...]        Build a profile from the instruction files you already have
+  convert <input>          Convert one file to you.md (alias of import <file>)
   export <target...>       Export preferences into tools' native instruction files
   sync                     Refresh previously exported files when your you.md changes
   help                     Show this help message
@@ -192,9 +200,10 @@ Options:
   --verbose                Verbose output
   --force                  Force overwrite existing files
   --json                   Output as JSON
-  --all                    Export to all supported targets
-  --dry-run                Preview export/sync without writing files
+  --all                    Export to all supported targets / import project files too
+  --dry-run                Preview export/sync/import without writing files
   --check                  Sync: report drift without writing, exit 1 if any
+  --merge                  Import: add to an existing profile instead of replacing it
 
 Examples:
   you-md skill install                     Install into all detected AI tools
@@ -206,7 +215,11 @@ Examples:
   you-md init -f signals prefs.md          Create full personalization signals
   you-md validate ./you.md                 Validate a file
   you-md merge ~/.you.md ./.you.md         Merge user and project profiles
-  you-md convert .cursorrules              Convert .cursorrules to you.md
+  you-md import --dry-run                  See which CLAUDE.md, GEMINI.md, Copilot files you have
+  you-md import -o ~/.you.md               Build ~/.you.md from every user-level instruction file
+  you-md import --all -o .you.md           Include this project's CLAUDE.md, .cursor/rules, and more
+  you-md import -o ~/.you.md --merge       Add only what your profile is missing
+  you-md convert .cursorrules              Convert one file to you.md
   you-md export claude gemini              Export to Claude Code and Gemini CLI
   you-md export --all --dry-run            Preview export to every tool
   you-md sync                              Refresh every exported file after editing you.md

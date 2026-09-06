@@ -3,6 +3,7 @@ import { initCommand } from "./commands/init";
 import { validateCommand } from "./commands/validate";
 import { mergeCommand } from "./commands/merge";
 import { convertCommand } from "./commands/convert";
+import { importCommand } from "./commands/import";
 import { exportCommand } from "./commands/export";
 import { syncCommand } from "./commands/sync";
 import { skillCommand } from "./commands/skill";
@@ -31,6 +32,10 @@ export async function main(): Promise<void> {
 
     case "convert":
       exitCode = await convertCommand(args.args, args.flags);
+      break;
+
+    case "import":
+      exitCode = await importCommand(args.args, args.flags);
       break;
 
     case "export":
