@@ -156,7 +156,34 @@ Profile discovery uses the first match in this order:
 4. XDG paths such as `~/.config/you.md` and `~/.config/you/you.md`
 5. An explicitly enabled remote HTTPS URL
 
-A project-local file therefore takes precedence over the user-level profile. If you want to combine profiles instead, merge them explicitly; later files win on conflicts:
+A project-local file therefore takes precedence over the user-level profile, and by itself it replaces the user-level profile entirely.
+
+### Build on a base profile with `extends`
+
+To layer profiles instead of replacing them, declare a base in the frontmatter. The base is loaded first and the declaring file wins wherever the two overlap, so a project `.you.md` can stay small and inherit everything else from your personal profile or a shared team profile:
+
+```markdown
+---
+schema_version: "1.1"
+extends: "~/.you.md"
+---
+
+# Me
+
+## Project Conventions
+
+- TypeScript strict mode
+- Vitest for tests
+```
+
+- Paths resolve relative to the file that declares them; `~/` expands to your home directory.
+- Chains work (a project profile can extend a team profile that extends a company profile), up to five levels deep. Cycles are reported as errors.
+- Sections present only in the base are inherited. Sections present in both are merged, with the declaring file's content and fields taking precedence, the same rules `you-md merge` uses.
+- HTTPS bases (`extends: "https://example.com/team.you.md"`) are off by default because a profile checked into a cloned repository could otherwise pull instructions from anywhere. Set `YOU_MD_ALLOW_REMOTE_EXTENDS=1` to opt in; the same HTTPS-only, size-limited, private-network-blocking fetch rules as remote discovery apply.
+
+Every consumer of the profile sees the resolved result: MCP tools, `export`, `sync`, `check`, and `validate`. `you-md check` and `you-md validate --verbose` print the chain a profile inherits from. Library users can pass `{ resolveExtends: false }` to `loadFromPath` or `loadFromUrl` to read a file exactly as written.
+
+For a one-off combined file without a persistent relationship, merge explicitly; later files win on conflicts:
 
 ```bash
 you-md merge ~/.you.md ./.you.md -o merged.md

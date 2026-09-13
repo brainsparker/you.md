@@ -155,6 +155,11 @@ export async function runCheck(options?: CheckOptions): Promise<CheckResult> {
   if (profileValid) {
     const version = parseResult.profile.schemaVersion || "unknown";
     log(`✓ Profile is valid (schema v${version})`);
+
+    const chain = parseResult.profile.extendsChain;
+    if (chain && chain.length > 0) {
+      log(`✓ Inherits from: ${chain.join(" > ")}`);
+    }
   } else {
     log("✗ Profile has validation errors:");
     for (const err of validationErrors) {
