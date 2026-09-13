@@ -47,10 +47,15 @@ export function mergeProfiles(
 
   // Merge each profile
   for (const profile of profiles) {
-    // Merge metadata (later values override)
+    // Merge metadata (later values override). A key the later profile does
+    // not set (parsed as undefined) is not a conflict and must not erase the
+    // earlier value, otherwise a base profile's privacy_level or author could
+    // never be inherited.
     mergedMetadata = {
       ...mergedMetadata,
-      ...profile.metadata,
+      ...Object.fromEntries(
+        Object.entries(profile.metadata).filter(([, value]) => value !== undefined)
+      ),
     };
 
     // Merge sections

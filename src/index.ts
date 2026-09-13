@@ -55,6 +55,13 @@ export type { ParseResult, ParseError, ParseWarning } from "./types/parser";
 export { discoverProfilePath, getDefaultSearchPaths } from "./core/discovery";
 export { mergeProfiles } from "./core/merger";
 export { validateProfile, isValidProfile } from "./core/validator";
+export {
+  resolveExtendsTarget,
+  canonicalSourceKey,
+  remoteExtendsAllowed,
+  maxExtendsDepth,
+} from "./core/inheritance";
+export type { ProfileSource, ResolveExtendsTargetResult } from "./core/inheritance";
 
 // Personalization signal extraction
 export {
@@ -93,6 +100,8 @@ export {
 export {
   MAX_FILE_SIZE,
   MAX_PARSE_TIME,
+  MAX_EXTENDS_DEPTH,
+  REMOTE_EXTENDS_ENV_VAR,
   SUPPORTED_SCHEMA_VERSIONS,
   CURRENT_SCHEMA_VERSION,
 } from "./utils/constants";

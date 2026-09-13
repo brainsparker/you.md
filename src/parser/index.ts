@@ -23,11 +23,28 @@ import { discoverProfilePath } from "../core/discovery";
 import { mergeProfiles } from "../core/merger";
 import { validateProfile } from "../core/validator";
 import {
+  canonicalSourceKey,
+  describeSource,
+  maxExtendsDepth,
+  remoteExtendsAllowed,
+  resolveExtendsTarget,
+  type ProfileSource,
+} from "../core/inheritance";
+import {
   MAX_FILE_SIZE,
   DEFAULT_FETCH_TIMEOUT,
   MAX_FETCH_TIMEOUT,
   CURRENT_SCHEMA_VERSION,
+  REMOTE_EXTENDS_ENV_VAR,
 } from "../utils/constants";
+
+/** Bookkeeping for one `extends` resolution walk */
+interface InheritanceState {
+  /** Canonical keys of every source already on the chain (cycle guard) */
+  readonly visited: Set<string>;
+  /** How many bases deep the walk currently is */
+  readonly depth: number;
+}
 
 /**
  * True when the IPv4 address (as octets) falls in a loopback, private,
@@ -274,6 +291,137 @@ export class YouMdParserImpl implements YouMdParser {
     path: string,
     options?: ParseOptions
   ): Promise<ParseResult> {
+    const source: ProfileSource = { kind: "path", value: resolve(path) };
+    return this.loadWithInheritance(source, options, undefined, {
+      visited: new Set([canonicalSourceKey(source)]),
+      depth: 0,
+    });
+  }
+
+  async loadFromUrl(
+    url: string,
+    fetchOptions?: FetchOptions,
+    parseOptions?: ParseOptions
+  ): Promise<ParseResult> {
+    const source: ProfileSource = { kind: "url", value: url };
+    return this.loadWithInheritance(source, parseOptions, fetchOptions, {
+      visited: new Set([canonicalSourceKey(source)]),
+      depth: 0,
+    });
+  }
+
+  /**
+   * Load a single source, then resolve its `extends` chain (unless disabled)
+   * and merge the bases underneath it.
+   */
+  private async loadWithInheritance(
+    source: ProfileSource,
+    options: ParseOptions | undefined,
+    fetchOptions: FetchOptions | undefined,
+    state: InheritanceState
+  ): Promise<ParseResult> {
+    const result =
+      source.kind === "url"
+        ? await this.fetchProfileFromUrl(source.value, fetchOptions, options)
+        : await this.readProfileFromPath(source.value, options);
+
+    if (!result.success || options?.resolveExtends === false) {
+      return result;
+    }
+
+    // YAML `extends:` with no value parses to null; treat it like absent.
+    const spec: unknown = result.profile.metadata.extends;
+    if (spec === undefined || spec === null) {
+      return result;
+    }
+
+    const fail = (error: ParseError): ParseResult => ({
+      profile: result.profile,
+      success: false,
+      errors: [error],
+      warnings: result.warnings,
+    });
+
+    const target = resolveExtendsTarget(spec, source);
+    if (!target.ok) {
+      return fail(target.error);
+    }
+
+    const depthLimit = maxExtendsDepth(options);
+    if (state.depth + 1 > depthLimit) {
+      return fail({
+        code: "EXTENDS_DEPTH_EXCEEDED",
+        message: `extends chain is deeper than the maximum of ${depthLimit} at ${describeSource(source)}`,
+        line: 1,
+      });
+    }
+
+    if (target.source.kind === "url" && !remoteExtendsAllowed(options)) {
+      return fail({
+        code: "EXTENDS_REMOTE_DISABLED",
+        message: `extends points at a remote profile (${target.source.value}) but remote bases are off. Set ${REMOTE_EXTENDS_ENV_VAR}=1 to allow HTTPS bases.`,
+        line: 1,
+      });
+    }
+
+    const key = canonicalSourceKey(target.source);
+    if (state.visited.has(key)) {
+      return fail({
+        code: "EXTENDS_CYCLE",
+        message: `extends cycle detected: ${describeSource(source)} extends ${describeSource(target.source)}, which is already in the chain`,
+        line: 1,
+      });
+    }
+
+    const baseResult = await this.loadWithInheritance(
+      target.source,
+      options,
+      target.source.kind === "url" ? fetchOptions : undefined,
+      { visited: new Set([...state.visited, key]), depth: state.depth + 1 }
+    );
+
+    if (!baseResult.success) {
+      const cause = baseResult.errors[0];
+      if (cause && cause.code.startsWith("EXTENDS_")) {
+        return fail(cause);
+      }
+      return fail({
+        code: "EXTENDS_NOT_FOUND",
+        message: `Cannot load extends target ${describeSource(target.source)}: ${cause?.message ?? "unknown error"}`,
+        line: 1,
+      });
+    }
+
+    const merged = mergeProfiles([baseResult.profile, result.profile]);
+    const profile: YouMdProfile = {
+      ...merged,
+      // Keep the declaring file's own text and origin. Bases are reachable
+      // through extendsChain; the merged view lives in `sections`.
+      rawContent: result.profile.rawContent,
+      sourcePath: result.profile.sourcePath,
+      sourceUrl: result.profile.sourceUrl,
+      extendsChain: [
+        ...(baseResult.profile.extendsChain ?? []),
+        describeSource(target.source),
+      ],
+    };
+
+    const label = describeSource(target.source);
+    return {
+      profile,
+      success: true,
+      errors: [],
+      warnings: [
+        ...baseResult.warnings.map((w) => ({ ...w, message: `${label}: ${w.message}` })),
+        ...result.warnings,
+      ],
+    };
+  }
+
+  private async readProfileFromPath(
+    path: string,
+    options?: ParseOptions
+  ): Promise<ParseResult> {
     const resolvedPath = resolve(path);
 
     // Check if file exists
@@ -367,7 +515,7 @@ export class YouMdParserImpl implements YouMdParser {
     }
   }
 
-  async loadFromUrl(
+  private async fetchProfileFromUrl(
     url: string,
     fetchOptions?: FetchOptions,
     parseOptions?: ParseOptions
