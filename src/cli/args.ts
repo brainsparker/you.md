@@ -69,6 +69,9 @@ export interface CliFlags {
 
   /** Report drift without writing, exit 1 if any (sync) */
   check?: boolean;
+
+  /** Auto-infer profile from local environment */
+  fromMe?: boolean;
 }
 
 /**
@@ -92,6 +95,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     all: { type: "boolean" as const },
     "dry-run": { type: "boolean" as const },
     check: { type: "boolean" as const },
+    "from-me": { type: "boolean" as const },
   };
 
   try {
@@ -131,6 +135,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         all: values.all,
         dryRun: values["dry-run"],
         check: values.check,
+        fromMe: values["from-me"],
       },
     };
   } catch (error) {
@@ -195,12 +200,14 @@ Options:
   --all                    Export to all supported targets
   --dry-run                Preview export/sync without writing files
   --check                  Sync: report drift without writing, exit 1 if any
+  --from-me                Auto-infer profile from local environment
 
 Examples:
   you-md skill install                     Install into all detected AI tools
   you-md skill status                      Check which tools have the skill
   you-md init -i                           Interactive wizard (easiest!)
   you-md init                              Create .you.md (identity template)
+  you-md init --from-me                    Auto-infer profile from local environment
   you-md init ~/.you.md                    Create global you.md
   you-md init -f developer .you.md         Create developer-focused profile
   you-md init -f signals prefs.md          Create full personalization signals
