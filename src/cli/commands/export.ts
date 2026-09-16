@@ -18,8 +18,20 @@
  *   codex      Codex CLI global guidance        ~/.codex/AGENTS.md
  *   gemini     Gemini CLI global context        ~/.gemini/GEMINI.md
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
+ *   kiro       Kiro global steering file        ~/.kiro/steering/you-md.md
+ *   zed        Zed global AGENTS.md             ~/.config/zed/AGENTS.md
+ *   opencode   OpenCode global AGENTS.md        ~/.config/opencode/AGENTS.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
+ *   copilot    GitHub Copilot repo instructions ./.github/copilot-instructions.md
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *
+ * Kiro steering files carry an `inclusion: always` frontmatter block so the
+ * profile loads into every Kiro session. Kiro requires that frontmatter to be
+ * the very first content in the file, which is why kiro is an own-file target
+ * (a managed block appended to a shared file could not guarantee that).
+ *
+ * Zed reads ~/.config/zed/AGENTS.md on macOS and Linux. On Windows the file
+ * lives at %APPDATA%\Zed\AGENTS.md; use `-o <path>` there.
  *
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
@@ -131,6 +143,33 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     render: prefs => prefs,
   },
   {
+    id: "kiro",
+    name: "Kiro",
+    scope: "user",
+    relPath: [".kiro", "steering", "you-md.md"],
+    mode: "own-file",
+    // Kiro parses inclusion frontmatter only when it is the first content in
+    // the file, so the frontmatter comes before the managed note.
+    render: prefs =>
+      ["---", "inclusion: always", "---", "", MANAGED_NOTE, "", prefs.trimEnd(), ""].join("\n"),
+  },
+  {
+    id: "zed",
+    name: "Zed",
+    scope: "user",
+    relPath: [".config", "zed", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    scope: "user",
+    relPath: [".config", "opencode", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
     id: "cursor",
     name: "Cursor",
     scope: "project",
@@ -148,6 +187,14 @@ export const EXPORT_TARGETS: ExportTarget[] = [
         prefs.trimEnd(),
         "",
       ].join("\n"),
+  },
+  {
+    id: "copilot",
+    name: "GitHub Copilot",
+    scope: "project",
+    relPath: [".github", "copilot-instructions.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
   },
   {
     id: "agents",

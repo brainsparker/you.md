@@ -2,7 +2,7 @@
 
 > **Stop reintroducing yourself to AI.**
 
-`you.md` is a portable, human-readable profile that tells AI assistants how you think, work, communicate, and want to be helped. Write it once, keep it under your control, and use it across Claude, Cursor, Windsurf, Codex, Gemini, and any agent that reads `AGENTS.md`.
+`you.md` is a portable, human-readable profile that tells AI assistants how you think, work, communicate, and want to be helped. Write it once, keep it under your control, and use it across Claude, Cursor, Windsurf, Codex, Gemini, GitHub Copilot, Kiro, Zed, OpenCode, and any agent that reads `AGENTS.md`.
 
 [![npm version](https://img.shields.io/npm/v/@brainsparker/you-md?logo=npm&color=cb3837)](https://www.npmjs.com/package/@brainsparker/you-md)
 [![CI](https://github.com/brainsparker/you.md/actions/workflows/ci.yml/badge.svg)](https://github.com/brainsparker/you.md/actions/workflows/ci.yml)
@@ -14,7 +14,7 @@ Your preferences should not be trapped in one app's memory. `you.md` makes them 
 ```text
                          ┌─ MCP ───────→ Claude · Cursor · Windsurf
 ~/.you.md or ./.you.md ──┤
-                         └─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · rules
+                         └─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · copilot-instructions.md · steering · rules
 ```
 
 ## Quick start
@@ -105,7 +105,13 @@ There are two ways to connect a profile:
 | Windsurf | `windsurf` | `windsurf` → global rules |
 | Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
 | Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
+| GitHub Copilot | — | `copilot` → `./.github/copilot-instructions.md` |
+| Kiro | — | `kiro` → `~/.kiro/steering/you-md.md` |
+| Zed | — | `zed` → `~/.config/zed/AGENTS.md` |
+| OpenCode | — | `opencode` → `~/.config/opencode/AGENTS.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
+
+The Copilot target is read by every Copilot surface (GitHub.com chat, the IDE extensions, the CLI, the cloud agent, and code review). The Kiro target is a global steering file with `inclusion: always`, so it applies in every Kiro workspace. Zed and OpenCode both read a global `AGENTS.md`; on Windows, Zed uses `%APPDATA%\Zed\AGENTS.md`, so pass `-o` with that path.
 
 Install MCP into all detected tools or choose one explicitly:
 
@@ -120,6 +126,7 @@ Export to native instruction files when MCP is unavailable or when you want the 
 ```bash
 you-md export --all
 you-md export claude codex gemini
+you-md export copilot kiro zed opencode
 you-md export --all --dry-run
 ```
 
