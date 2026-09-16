@@ -159,6 +159,54 @@ describe("exportToTarget", () => {
     expect(content).not.toContain("old prefs");
   });
 
+  it("writes kiro exports as an owned steering file with inclusion frontmatter first", async () => {
+    const { path } = await exportToTarget(target("kiro"), prefs, { home, cwd });
+
+    expect(path).toBe(join(home, ".kiro", "steering", "you-md.md"));
+    const content = readFileSync(path, "utf-8");
+    // Kiro only honors frontmatter when it is the very first content in the file.
+    expect(content.startsWith("---\ninclusion: always\n---\n")).toBe(true);
+    expect(content).toContain("Short sentences.");
+    expect(content).not.toContain(BEGIN_MARKER);
+  });
+
+  it("overwrites the owned kiro file entirely on re-export", async () => {
+    await exportToTarget(target("kiro"), "old prefs", { home, cwd });
+    const { path } = await exportToTarget(target("kiro"), "new prefs", { home, cwd });
+
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain("new prefs");
+    expect(content).not.toContain("old prefs");
+  });
+
+  it("merges copilot exports into an existing repository instructions file", async () => {
+    const path = join(cwd, ".github", "copilot-instructions.md");
+    mkdirSync(join(cwd, ".github"), { recursive: true });
+    writeFileSync(path, "# Repo conventions\n\nRun npm test before pushing.\n", "utf-8");
+
+    const { action } = await exportToTarget(target("copilot"), prefs, { home, cwd });
+    expect(action).toBe("updated");
+
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain("Run npm test before pushing.");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+    expect(content).toContain(END_MARKER);
+  });
+
+  it("writes zed and opencode exports as managed blocks in their global AGENTS.md", async () => {
+    const zed = await exportToTarget(target("zed"), prefs, { home, cwd });
+    const opencode = await exportToTarget(target("opencode"), prefs, { home, cwd });
+
+    expect(zed.path).toBe(join(home, ".config", "zed", "AGENTS.md"));
+    expect(opencode.path).toBe(join(home, ".config", "opencode", "AGENTS.md"));
+    for (const p of [zed.path, opencode.path]) {
+      const content = readFileSync(p, "utf-8");
+      expect(content).toContain(BEGIN_MARKER);
+      expect(content).toContain("Short sentences.");
+    }
+  });
+
   it("respects an output path override", async () => {
     const override = join(tempDir, "custom", "out.md");
     const { path } = await exportToTarget(target("gemini"), prefs, { home, cwd }, override);
@@ -171,7 +219,33 @@ describe("exportToTarget", () => {
 describe("EXPORT_TARGETS", () => {
   it("covers the expected tools", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
-    expect(ids).toEqual(["agents", "claude", "codex", "cursor", "gemini", "windsurf"]);
+    expect(ids).toEqual([
+      "agents",
+      "claude",
+      "codex",
+      "copilot",
+      "cursor",
+      "gemini",
+      "kiro",
+      "opencode",
+      "windsurf",
+      "zed",
+    ]);
+  });
+
+  it("resolves the new tool targets to the paths those tools read", () => {
+    expect(resolveTargetPath(target("kiro"), { home, cwd })).toBe(
+      join(home, ".kiro", "steering", "you-md.md")
+    );
+    expect(resolveTargetPath(target("zed"), { home, cwd })).toBe(
+      join(home, ".config", "zed", "AGENTS.md")
+    );
+    expect(resolveTargetPath(target("opencode"), { home, cwd })).toBe(
+      join(home, ".config", "opencode", "AGENTS.md")
+    );
+    expect(resolveTargetPath(target("copilot"), { home, cwd })).toBe(
+      join(cwd, ".github", "copilot-instructions.md")
+    );
   });
 
   it("has unique ids and paths", () => {
