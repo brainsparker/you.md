@@ -20,6 +20,8 @@
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *   muse       Muse (Meta) personal assistant  ~/.muse/preferences.md
+ *   instinct   Instinct personal assistant      ~/.instinct/you.md
  *
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
@@ -127,6 +129,23 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     name: "Windsurf",
     scope: "user",
     relPath: [".codeium", "windsurf", "memories", "global_rules.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "muse",
+    name: "Muse (Meta)",
+    scope: "user",
+    relPath: [".muse", "preferences.md"],
+    mode: "managed-block",
+    render: prefs =>
+      prefs.replace(/^# User Preferences \(from you.md\)\n*/m, "").trimStart(),
+  },
+  {
+    id: "instinct",
+    name: "Instinct",
+    scope: "user",
+    relPath: [".instinct", "you.md"],
     mode: "managed-block",
     render: prefs => prefs,
   },

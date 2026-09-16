@@ -166,12 +166,29 @@ describe("exportToTarget", () => {
     expect(path).toBe(override);
     expect(readFileSync(path, "utf-8")).toContain("Short sentences.");
   });
+
+  it("exports muse with stripped title prefix", async () => {
+    const { path } = await exportToTarget(target("muse"), prefs, { home, cwd });
+    expect(path).toBe(join(home, ".muse", "preferences.md"));
+    const content = readFileSync(path, "utf-8");
+    // The "User Preferences (from you.md)" title should be stripped by the render
+    expect(content).not.toContain("User Preferences (from you.md)");
+    expect(content).toContain("## Style");
+    expect(content).toContain("Short sentences.");
+  });
+
+  it("exports instinct to the expected path", async () => {
+    const { path } = await exportToTarget(target("instinct"), prefs, { home, cwd });
+    expect(path).toBe(join(home, ".instinct", "you.md"));
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain("Short sentences.");
+  });
 });
 
 describe("EXPORT_TARGETS", () => {
   it("covers the expected tools", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
-    expect(ids).toEqual(["agents", "claude", "codex", "cursor", "gemini", "windsurf"]);
+    expect(ids).toEqual(["agents", "claude", "codex", "cursor", "gemini", "instinct", "muse", "windsurf"]);
   });
 
   it("has unique ids and paths", () => {
