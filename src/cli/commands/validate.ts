@@ -33,6 +33,7 @@ export async function validateCommand(
     const output = {
       path: filePath,
       valid: result.success,
+      extendsChain: result.profile.extendsChain ?? [],
       errors: result.errors,
       warnings: result.warnings,
     };
@@ -67,6 +68,11 @@ export async function validateCommand(
         console.log("Profile details:");
         console.log(`  Schema version: ${result.profile.schemaVersion}`);
         console.log(`  Sections: ${result.profile.sections.size}`);
+
+        const chain = result.profile.extendsChain;
+        if (chain && chain.length > 0) {
+          console.log(`  Inherits from: ${chain.join(" > ")}`);
+        }
 
         if (result.profile.metadata.author) {
           console.log(`  Author: ${result.profile.metadata.author}`);
