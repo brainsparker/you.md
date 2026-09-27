@@ -87,7 +87,7 @@ It is ordinary Markdown with small YAML frontmatter—easy for people to inspect
 - **Human-readable.** Review changes in a diff, keep the file in Git, or edit it in any text editor.
 - **Works with and without MCP.** Connect supported apps directly or export to the native instruction files they already read.
 - **Project-aware.** Keep personal defaults in `~/.you.md` and use a project-local `.you.md` when a repository needs different context.
-- **Designed against drift.** Managed export blocks preserve your other instructions, and `you-md sync --check` catches stale copies in CI.
+- **Designed against drift.** Managed export blocks preserve your other instructions, `you-md sync --check` catches stale copies in CI, and `you-md check` shows which instruction file each tool will actually load.
 - **Useful as infrastructure.** The typed TypeScript API parses, validates, merges, and extracts personalization signals for your own products.
 
 ## Integrations
@@ -125,7 +125,7 @@ you-md export --all --dry-run
 
 Exports are idempotent. In shared files, `you.md` owns only the content between `<!-- you-md:begin -->` and `<!-- you-md:end -->`; everything outside those markers is preserved. Existing files are backed up before writes. The Cursor target is a dedicated file owned by `you.md`.
 
-Exporting the `agents` target also adds an `@AGENTS.md` bridge to the project's `CLAUDE.md`, so Claude Code and AGENTS.md-aware tools can share one source of project instructions.
+Exporting the `agents` target also adds an `@AGENTS.md` bridge to the project's `CLAUDE.md`. Claude Code 2.1.277 and later reads `AGENTS.md` on its own, but only when no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` sits in the working directory or above it. The import keeps `AGENTS.md` visible when a `CLAUDE.md` exists, and in sessions that cannot load `AGENTS.md` directly, without ever loading it twice.
 
 ## Keep every tool in sync
 
@@ -145,6 +145,45 @@ Use the check mode as a CI drift gate:
 ```
 
 `sync` does not create new targets. Run `you-md export <target>` once to opt a file into management.
+
+## Know which file each tool actually reads
+
+Every coding agent loads instruction files by its own rules, and the rules changed in September 2026: Claude Code now reads a project's `AGENTS.md`, but a `CLAUDE.md` anywhere on the path makes it read that instead. Codex concatenates `AGENTS.md` files up to a 32 KiB cap. Gemini CLI only reads the names in its `context.fileName` setting. Copilot CLI reads all of them at once.
+
+`you-md check` audits the current project against those rules and reports where files shadow, duplicate, or truncate each other:
+
+```text
+Instruction files (project root: /work/api):
+    ./CLAUDE.md         3 lines   mentions AGENTS.md, no import
+    ./AGENTS.md        22 lines   you-md block
+    ~/.codex/AGENTS.md 40 lines
+    Claude Code project instructions: claude-md-or-agents-md (default)
+
+Precedence:
+    ⚠ Claude Code    ./CLAUDE.md talks about AGENTS.md in prose, but only an `@AGENTS.md` import line makes Claude load it. ...
+                     fix: Replace the sentence with an `@AGENTS.md` line, or run `you-md export agents` to add a managed import.
+    ℹ Gemini CLI     Gemini CLI loads only `GEMINI.md` (its context.fileName setting), so it does not see ./AGENTS.md ...
+                     fix: Run `you-md export gemini`, or add "AGENTS.md" to `context.fileName` in ~/.gemini/settings.json.
+```
+
+Findings and what they mean:
+
+| Code | Level | Meaning |
+| --- | --- | --- |
+| `claude-shadows-agents` | warn | A `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` on the path hides `AGENTS.md` from Claude Code |
+| `claude-mentions-agents-without-import` | warn | `CLAUDE.md` says "read AGENTS.md" in prose; only an `@AGENTS.md` import line works |
+| `claude-mode-skips-agents` | warn | Claude Code's Project instructions setting is `claude-md` or `managed-only` |
+| `session-start-hook-duplicates-agents` | warn | A `SessionStart` hook still prints `AGENTS.md`, so it now loads twice |
+| `duplicate-managed-blocks` | warn | Your you.md block is in more than one project file that some tools load together |
+| `managed-block-drift` | warn | Managed blocks differ between files; run `you-md sync` |
+| `codex-size-cap` | warn | The Codex `AGENTS.md` chain exceeds `project_doc_max_bytes` (32 KiB by default) |
+| `agents-read-directly` | info | No `CLAUDE.md` on the path; Claude Code 2.1.277+ reads `AGENTS.md` directly |
+| `user-and-project-managed-blocks` | info | `~/.claude/CLAUDE.md` and a project file both carry your block |
+| `long-instruction-file` | info | A file Claude reads is over 200 lines, Anthropic's adherence guidance |
+| `claude-mode-ignored-in-project-settings` | info | The Claude Code mode is set in project settings, which Claude Code ignores |
+| `gemini-skips-agents` | info | Gemini CLI does not read `AGENTS.md` and the project has no `GEMINI.md` |
+
+The audit is read-only. `you-md check --json` prints the same report as JSON, with each finding's `code`, `level`, `paths`, and `fix`, for scripts and CI.
 
 ## Profiles and precedence
 
@@ -168,7 +207,7 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 | --- | --- |
 | `you-md init -i [path]` | Build a profile with the interactive wizard |
 | `you-md init --format developer [path]` | Start from the developer-focused template |
-| `you-md check` | Check profile validity and MCP installations |
+| `you-md check [--json]` | Check profile validity, MCP installations, and instruction-file precedence |
 | `you-md validate <path>` | Validate a profile against the schema |
 | `you-md skill install [tool]` | Add the local MCP server to supported apps |
 | `you-md skill status` | Show detected tools and installation state |

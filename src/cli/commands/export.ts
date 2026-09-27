@@ -24,8 +24,11 @@
  *   instinct   Instinct personal assistant      ~/.instinct/you.md
  *
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
- * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
- * See `you-md sync` for detecting and repairing drift after you.md edits.
+ * `@AGENTS.md` import line. Claude Code 2.1.277+ reads AGENTS.md on its own,
+ * but only when no CLAUDE.md sits on the path; the import keeps AGENTS.md
+ * visible when a CLAUDE.md exists and in sessions that cannot load AGENTS.md
+ * directly. Claude never loads an imported AGENTS.md twice.
+ * See `you-md sync` for drift repair and `you-md check` for a precedence audit.
  */
 
 import { readFile, writeFile, mkdir, copyFile, rename } from "node:fs/promises"
@@ -235,16 +238,21 @@ export async function exportToTarget(
 // ---------------------------------------------------------------------------
 
 /**
- * Claude Code reads CLAUDE.md, not AGENTS.md. The community fix is a symlink
- * or an `@AGENTS.md` import line. We write the import line inside a managed
- * block: it survives user edits around it, works on every platform, and
- * keeps the project's AGENTS.md as the single source of truth.
+ * Since 2.1.277 Claude Code reads a project's AGENTS.md directly, but a
+ * CLAUDE.md, .claude/CLAUDE.md or CLAUDE.local.md anywhere on the path makes
+ * it read those instead (default "claude-md-or-agents-md" mode). An
+ * `@AGENTS.md` import inside CLAUDE.md is the fix Anthropic documents, and it
+ * is also what older versions and plugin-disabled sessions need. We write the
+ * import line inside a managed block: it survives user edits around it, works
+ * on every platform (symlinks do not on Windows), and keeps the project's
+ * AGENTS.md as the single source of truth.
  */
 const BRIDGE_CONTENT = [
   "@AGENTS.md",
   "",
   "<!-- The line above imports AGENTS.md so Claude Code reads the same",
-  "     instructions as every AGENTS.md-native tool. One source, no drift. -->",
+  "     instructions as every AGENTS.md-native tool, even when this CLAUDE.md",
+  "     would otherwise shadow it. One source, no drift. -->",
 ].join("\n")
 
 export interface BridgeResult {

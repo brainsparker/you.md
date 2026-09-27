@@ -16,7 +16,8 @@
  * sync also maintains the CLAUDE.md -> AGENTS.md bridge: when a project
  * AGENTS.md is managed by you-md, the project CLAUDE.md gets an `@AGENTS.md`
  * import line (inside a managed block), so Claude Code reads the same
- * content every other tool reads from AGENTS.md.
+ * content every other tool reads from AGENTS.md even though a CLAUDE.md on
+ * the path would otherwise shadow it (Claude Code 2.1.277+ default mode).
  */
 
 import { readFile } from "node:fs/promises"
