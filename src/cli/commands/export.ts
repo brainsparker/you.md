@@ -1,6 +1,6 @@
 /**
- * you-md export: write your you.md preferences into each AI tool's
- * native instruction file, so tools that don't speak MCP still know you.
+ * you-md export: carry your you.md context into every AI tool and agent,
+ * local or cloud, so the ones that don't speak MCP still know you.
  *
  * Usage:
  *   you-md export claude              Export to Claude Code (~/.claude/CLAUDE.md)
@@ -20,8 +20,15 @@
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
- *   muse       Muse (Meta) personal assistant  ~/.muse/preferences.md
- *   instinct   Instinct personal assistant      ~/.instinct/you.md
+ *   openclaw   OpenClaw workspace user file     ~/.openclaw/workspace/USER.md
+ *   hermes     Hermes Agent global identity     ~/.hermes/SOUL.md
+ *
+ * Cloud personal agents have no local instruction file, so they get a
+ * portable copy of your context to hand over (paste, upload, or text):
+ *   muse       Muse (Meta)                      ~/.you-md/portable/muse.md
+ *   instinct   Instinct                         ~/.you-md/portable/instinct.md
+ *   dots       ChatGPT dots                     ~/.you-md/portable/chatgpt-dots.md
+ *   grok       Grok Bot                         ~/.you-md/portable/grok-bot.md
  *
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
@@ -79,6 +86,75 @@ export function applyManagedBlock(existing: string | null, block: string): strin
 }
 
 // ---------------------------------------------------------------------------
+// Personal-agent rendering
+// ---------------------------------------------------------------------------
+
+const DEV_TITLE = /^# User Preferences \(from you.md\)\n*/m
+
+/**
+ * Swap the developer-flavored title for a personal one. Personal agents
+ * (Muse, OpenClaw, dots, ...) read this as context about a person, not a
+ * list of coding preferences.
+ */
+export function retitle(prefs: string, title: string): string {
+  return `# ${title}\n\n` + prefs.replace(DEV_TITLE, "").trimStart()
+}
+
+const PORTABLE_PREAMBLE = [
+  "This is my personal context, written and kept by me in my you.md.",
+  "Use it to tailor how you help me.",
+].join("\n")
+
+/**
+ * Usage notes addressed to the agent. Phrased as first-person requests, not
+ * overrides: agents that screen context for prompt injection (Hermes, dots)
+ * should read these as the user's preferences.
+ */
+const CONFLICT_NOTE =
+  "If something here conflicts with what you've inferred about me, go with this " +
+  "file and ask me before changing your mind."
+const PRIVACY_NOTE =
+  "This is private. Don't share or quote it in group chats, with other people, " +
+  "or with other people's agents unless I ask you to."
+const SAVE_NOTE =
+  "Save this as long-term context about me. When I send a new version, it " +
+  "replaces this one."
+
+function usageSection(notes: string[]): string {
+  return ["## How to use this", "", ...notes.map(n => `- ${n}`)].join("\n")
+}
+
+/** Insert text right after the first (title) line of a rendered body. */
+function afterTitle(body: string, ...blocks: string[]): string {
+  const [title, ...rest] = body.split("\n")
+  return [title, "", ...blocks.flatMap(b => [b, ""]), rest.join("\n").trim(), ""].join("\n")
+}
+
+/**
+ * Render context for a local personal agent (OpenClaw, Hermes). These load
+ * the file every session, so they only need the conflict and privacy notes.
+ */
+export function renderPersonal(prefs: string, title: string): string {
+  return afterTitle(retitle(prefs, title), usageSection([CONFLICT_NOTE, PRIVACY_NOTE]))
+}
+
+/**
+ * Render the portable copy handed to a cloud agent. you-md owns the whole
+ * file, so it carries the managed note, a short preamble, and usage notes
+ * (plus an optional agent-specific one) for whichever agent receives it.
+ */
+export function renderPortable(prefs: string, agentNote?: string): string {
+  const notes = [SAVE_NOTE, CONFLICT_NOTE, PRIVACY_NOTE]
+  if (agentNote) notes.push(agentNote)
+  return afterTitle(
+    retitle(prefs, "About me (from you.md)"),
+    MANAGED_NOTE,
+    PORTABLE_PREAMBLE,
+    usageSection(notes)
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Export targets
 // ---------------------------------------------------------------------------
 
@@ -97,6 +173,13 @@ export interface ExportTarget {
   mode: "managed-block" | "own-file"
   /** Render the final file (own-file) or block content (managed-block) */
   render: (prefs: string) => string
+  /**
+   * Cloud agents can't read local files. For these, the export is a portable
+   * copy and `handoff` tells the user how to get it into the agent.
+   */
+  handoff?: string
+  /** Warn (never truncate) when the rendered content exceeds the tool's limit */
+  maxChars?: number
 }
 
 export const EXPORT_TARGETS: ExportTarget[] = [
@@ -133,23 +216,6 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     render: prefs => prefs,
   },
   {
-    id: "muse",
-    name: "Muse (Meta)",
-    scope: "user",
-    relPath: [".muse", "preferences.md"],
-    mode: "managed-block",
-    render: prefs =>
-      prefs.replace(/^# User Preferences \(from you.md\)\n*/m, "").trimStart(),
-  },
-  {
-    id: "instinct",
-    name: "Instinct",
-    scope: "user",
-    relPath: [".instinct", "you.md"],
-    mode: "managed-block",
-    render: prefs => prefs,
-  },
-  {
     id: "cursor",
     name: "Cursor",
     scope: "project",
@@ -175,6 +241,64 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     relPath: ["AGENTS.md"],
     mode: "managed-block",
     render: prefs => prefs,
+  },
+  {
+    id: "openclaw",
+    name: "OpenClaw",
+    scope: "user",
+    relPath: [".openclaw", "workspace", "USER.md"],
+    mode: "managed-block",
+    render: prefs => renderPersonal(prefs, "About me (from you.md)"),
+    maxChars: 20_000,
+  },
+  {
+    id: "hermes",
+    name: "Hermes Agent",
+    scope: "user",
+    relPath: [".hermes", "SOUL.md"],
+    mode: "managed-block",
+    render: prefs => renderPersonal(prefs, "About the person you work for (from you.md)"),
+    maxChars: 20_000,
+  },
+  {
+    id: "muse",
+    name: "Muse (Meta)",
+    scope: "user",
+    relPath: [".you-md", "portable", "muse.md"],
+    mode: "own-file",
+    render: prefs => renderPortable(prefs),
+    handoff: "In Muse, tap the avatar, open Memory, and paste this file in.",
+  },
+  {
+    id: "instinct",
+    name: "Instinct",
+    scope: "user",
+    relPath: [".you-md", "portable", "instinct.md"],
+    mode: "own-file",
+    render: prefs =>
+      renderPortable(prefs, "Please save all of this to your memory so it carries into future conversations."),
+    handoff: "Text this file to Instinct (iMessage or WhatsApp) and ask it to remember it.",
+  },
+  {
+    id: "dots",
+    name: "ChatGPT dots",
+    scope: "user",
+    relPath: [".you-md", "portable", "chatgpt-dots.md"],
+    mode: "own-file",
+    render: prefs => renderPortable(prefs),
+    handoff: "In your dot's conversation, attach this file with + and ask it to keep it as standing context.",
+  },
+  {
+    id: "grok",
+    name: "Grok Bot",
+    scope: "user",
+    relPath: [".you-md", "portable", "grok-bot.md"],
+    mode: "own-file",
+    render: prefs =>
+      renderPortable(prefs, "Re-read /workspace/you.md before every task. It's where I keep this current."),
+    handoff:
+      "Upload this to your Bots' cloud computer as /workspace/you.md, then add " +
+      "\"Read /workspace/you.md before every task\" to each Bot's profile.",
   },
 ]
 
@@ -206,7 +330,7 @@ export async function exportToTarget(
   prefs: string,
   paths?: ExportPaths,
   outputOverride?: string
-): Promise<{ path: string; action: ExportAction }> {
+): Promise<{ path: string; action: ExportAction; chars: number }> {
   const path = outputOverride ? resolve(outputOverride) : resolveTargetPath(target, paths)
   const rendered = target.render(prefs)
   const exists = existsSync(path)
@@ -227,7 +351,23 @@ export async function exportToTarget(
   await writeFile(tmp, next, "utf-8")
   await rename(tmp, path)
 
-  return { path, action: exists ? "updated" : "created" }
+  return { path, action: exists ? "updated" : "created", chars: rendered.length }
+}
+
+/**
+ * One-line notes printed after a target is written: how to hand a portable
+ * copy to a cloud agent, and whether the content risks truncation.
+ */
+export function targetNotes(target: ExportTarget, chars: number): string[] {
+  const notes: string[] = []
+  if (target.handoff) notes.push(`→ ${target.handoff}`)
+  if (target.maxChars && chars > target.maxChars) {
+    notes.push(
+      `! ${chars.toLocaleString("en-US")} chars; ${target.name} truncates past ` +
+        `${target.maxChars.toLocaleString("en-US")}. Consider trimming your you.md.`
+    )
+  }
+  return notes
 }
 
 // ---------------------------------------------------------------------------
@@ -290,12 +430,14 @@ export async function ensureClaudeBridge(paths?: ExportPaths): Promise<BridgeRes
 // ---------------------------------------------------------------------------
 
 function helpText(): string {
-  const rows = EXPORT_TARGETS.map(t => {
+  const row = (t: ExportTarget) => {
     const loc = (t.scope === "user" ? "~/" : "./") + t.relPath.join("/")
     return `  ${t.id.padEnd(10)} ${t.name.padEnd(22)} ${loc}`
-  }).join("\n")
+  }
+  const local = EXPORT_TARGETS.filter(t => !t.handoff).map(row).join("\n")
+  const cloud = EXPORT_TARGETS.filter(t => t.handoff).map(row).join("\n")
 
-  return `you-md export: write your preferences into each tool's native instruction file
+  return `you-md export: carry your personal context into every tool and agent you use
 
 Usage:
   you-md export <target...>         Export to one or more targets
@@ -303,11 +445,16 @@ Usage:
   you-md export --all --dry-run     Preview without writing
   you-md export <target> -o <path>  Override output path (single target only)
 
-Targets:
-${rows}
+Tools and agents that read a local file:
+${local}
+
+Cloud personal agents (you get a portable copy to hand over):
+${cloud}
 
 Exports are idempotent. Managed content lives between you-md markers,
-so your own notes in the same file are preserved on re-export.`
+so your own notes in the same file are preserved on re-export. Your
+context is yours: every target gets the same profile, and 'you-md sync'
+keeps all of them current.`
 }
 
 export async function exportCommand(
@@ -359,6 +506,7 @@ export async function exportCommand(
       const path = flags.output ? resolve(flags.output) : resolveTargetPath(target, paths)
       const action = existsSync(path) ? "update" : "create"
       console.log(`  ${target.name.padEnd(22)} would ${action}  ${path}`)
+      if (target.handoff) console.log(`  ${"".padEnd(22)} → ${target.handoff}`)
     }
     if (flags.verbose) {
       console.log("\nContent that would be exported:\n")
@@ -371,9 +519,12 @@ export async function exportCommand(
   let failures = 0
   for (const target of targets) {
     try {
-      const { path, action } = await exportToTarget(target, prefs, paths, flags.output)
+      const { path, action, chars } = await exportToTarget(target, prefs, paths, flags.output)
       if (!flags.quiet) {
         console.log(`✓ ${target.name.padEnd(22)} ${action}  ${path}`)
+        for (const note of targetNotes(target, chars)) {
+          console.log(`  ${"".padEnd(22)} ${note}`)
+        }
       }
       // Exporting a project AGENTS.md also bridges the project CLAUDE.md to
       // it (via an @AGENTS.md import), so Claude Code reads the same content.
@@ -392,8 +543,9 @@ export async function exportCommand(
 
   if (!flags.quiet && failures === 0) {
     console.log("")
-    console.log("Preferences exported. Tools read these files at session start.")
-    console.log("Re-run 'you-md export' whenever you update your you.md.")
+    console.log("Context exported. Local tools read these files at session start;")
+    console.log("cloud agents get the portable copy once you hand it over (see → notes).")
+    console.log("Re-run 'you-md sync' whenever you update your you.md.")
   }
 
   return failures > 0 ? 1 : 0

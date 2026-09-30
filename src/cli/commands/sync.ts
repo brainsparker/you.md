@@ -86,6 +86,8 @@ interface TargetReport {
   path: string
   status: SyncStatus
   action: "updated" | "would-update" | "none"
+  /** Cloud agents only see a refreshed portable copy once it's handed over again */
+  handoff?: string
 }
 
 function statusLabel(report: TargetReport): string {
@@ -110,7 +112,8 @@ Usage:
   you-md sync --dry-run    Preview what would change, always exit 0
 
 sync only touches files that already carry you-md managed markers (or files
-you-md owns outright, like Cursor's .mdc rule). It never creates new export
+you-md owns outright, like Cursor's .mdc rule and the portable copies for
+cloud agents; refreshed portable copies need to be handed over again). It never creates new export
 targets: run 'you-md export <target>' first to add one.
 
 When a project AGENTS.md is managed by you-md, sync also keeps the project
@@ -173,7 +176,7 @@ export async function syncCommand(
       }
     }
 
-    reports.push({ name: target.name, path, status, action })
+    reports.push({ name: target.name, path, status, action, handoff: target.handoff })
   }
 
   // CLAUDE.md -> AGENTS.md bridge: only when the project AGENTS.md is managed
@@ -211,6 +214,9 @@ export async function syncCommand(
   if (!flags.quiet) {
     for (const report of reports) {
       console.log(`  ${report.name.padEnd(22)} ${statusLabel(report).padEnd(12)} ${report.path}`)
+      if (report.handoff && report.action !== "none") {
+        console.log(`  ${"".padEnd(22)} → Re-share it: ${report.handoff}`)
+      }
     }
     console.log("")
     if (checkOnly || preview) {
