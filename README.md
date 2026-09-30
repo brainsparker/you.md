@@ -2,7 +2,7 @@
 
 > **Stop reintroducing yourself to AI.**
 
-`you.md` is a portable, human-readable profile that tells AI assistants how you think, work, communicate, and want to be helped. Write it once, keep it under your control, and use it across Claude, Cursor, Windsurf, Codex, Gemini, and any agent that reads `AGENTS.md`.
+`you.md` is a portable, human-readable profile that tells AI assistants how you think, work, communicate, and want to be helped. Write it once, keep it under your control, and take it everywhere: coding tools like Claude, Cursor, Codex, and Gemini, and personal agents like OpenClaw, Hermes, Muse, Instinct, ChatGPT dots, and Grok Bot.
 
 [![npm version](https://img.shields.io/npm/v/@brainsparker/you-md?logo=npm&color=cb3837)](https://www.npmjs.com/package/@brainsparker/you-md)
 [![CI](https://github.com/brainsparker/you.md/actions/workflows/ci.yml/badge.svg)](https://github.com/brainsparker/you.md/actions/workflows/ci.yml)
@@ -14,7 +14,8 @@ Your preferences should not be trapped in one app's memory. `you.md` makes them 
 ```text
                          ┌─ MCP ───────→ Claude · Cursor · Windsurf
 ~/.you.md or ./.you.md ──┤
-                         └─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · rules
+                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · USER.md · SOUL.md
+                         └─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot
 ```
 
 ## Quick start
@@ -106,6 +107,21 @@ There are two ways to connect a profile:
 | Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
 | Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
+| OpenClaw | — | `openclaw` → `~/.openclaw/workspace/USER.md` |
+| Hermes Agent | — | `hermes` → `~/.hermes/SOUL.md` |
+
+### Cloud personal agents
+
+Muse, Instinct, ChatGPT dots, and Grok Bot run in the cloud, so there's no local file for them to read. For these, `you-md export` writes a portable copy of your context to `~/.you-md/portable/` and tells you how to hand it over:
+
+| Agent | Target | How it gets there |
+| --- | --- | --- |
+| Muse (Meta) | `muse` | Tap the avatar → Memory, paste it in |
+| Instinct | `instinct` | Text it to Instinct over iMessage or WhatsApp |
+| ChatGPT dots | `dots` | Attach it with **+** in your dot's conversation |
+| Grok Bot | `grok` | Upload to `/workspace/you.md`, and have each Bot's profile read it |
+
+Every target gets the same profile, because it's your context and it should go wherever you do. When you edit your `you.md`, `you-md sync` refreshes the portable copies and reminds you which agents need the new version.
 
 Install MCP into all detected tools or choose one explicitly:
 

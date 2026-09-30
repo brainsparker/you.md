@@ -10,6 +10,9 @@ import {
   resolveTargetPath,
   exportToTarget,
   EXPORT_TARGETS,
+  renderPortable,
+  renderPersonal,
+  targetNotes,
   type ExportTarget,
 } from "../../src/cli/commands/export";
 
@@ -167,28 +170,121 @@ describe("exportToTarget", () => {
     expect(readFileSync(path, "utf-8")).toContain("Short sentences.");
   });
 
-  it("exports muse with stripped title prefix", async () => {
-    const { path } = await exportToTarget(target("muse"), prefs, { home, cwd });
-    expect(path).toBe(join(home, ".muse", "preferences.md"));
+  it("writes openclaw context into the workspace USER.md with a personal title", async () => {
+    const { path } = await exportToTarget(target("openclaw"), prefs, { home, cwd });
+    expect(path).toBe(join(home, ".openclaw", "workspace", "USER.md"));
     const content = readFileSync(path, "utf-8");
-    // The "User Preferences (from you.md)" title should be stripped by the render
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("# About me (from you.md)");
     expect(content).not.toContain("User Preferences (from you.md)");
-    expect(content).toContain("## Style");
     expect(content).toContain("Short sentences.");
   });
 
-  it("exports instinct to the expected path", async () => {
-    const { path } = await exportToTarget(target("instinct"), prefs, { home, cwd });
-    expect(path).toBe(join(home, ".instinct", "you.md"));
+  it("appends to an existing Hermes SOUL.md without clobbering the persona", async () => {
+    const path = join(home, ".hermes", "SOUL.md");
+    mkdirSync(join(home, ".hermes"), { recursive: true });
+    writeFileSync(path, "You are Hermes. Be direct.\n", "utf-8");
+
+    await exportToTarget(target("hermes"), prefs, { home, cwd });
+
     const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("You are Hermes. Be direct.")).toBe(true);
+    expect(content).toContain("# About the person you work for (from you.md)");
     expect(content).toContain("Short sentences.");
+  });
+
+  it.each(["muse", "instinct", "dots", "grok"])(
+    "writes a portable copy for cloud agent %s",
+    async id => {
+      const t = target(id);
+      const { path } = await exportToTarget(t, prefs, { home, cwd });
+      expect(path.startsWith(join(home, ".you-md", "portable"))).toBe(true);
+      expect(t.handoff).toBeTruthy();
+
+      const content = readFileSync(path, "utf-8");
+      expect(content.startsWith("# About me (from you.md)")).toBe(true);
+      expect(content).not.toContain("User Preferences (from you.md)");
+      expect(content).toContain("## Style");
+      expect(content).toContain("Short sentences.");
+    }
+  );
+});
+
+describe("agent usage notes", () => {
+  const prefs = "# User Preferences (from you.md)\n\n## Style\n\nShort.";
+
+  it("puts usage notes ahead of the profile in portable copies", () => {
+    const out = renderPortable(prefs);
+    expect(out).toContain("## How to use this");
+    expect(out).toContain("This is private.");
+    expect(out).toContain("replaces this one");
+    expect(out.indexOf("## How to use this")).toBeLessThan(out.indexOf("## Style"));
+  });
+
+  it("appends an agent-specific note when given", () => {
+    expect(renderPortable(prefs, "Re-read it daily.")).toContain("- Re-read it daily.");
+    expect(target("grok").render(prefs)).toContain("/workspace/you.md before every task");
+    expect(target("instinct").render(prefs)).toContain("save all of this to your memory");
+  });
+
+  it("gives local personal agents the privacy note but not the save note", () => {
+    for (const id of ["openclaw", "hermes"]) {
+      const out = target(id).render(prefs);
+      expect(out).toContain("This is private.");
+      expect(out).not.toContain("replaces this one");
+    }
+    expect(renderPersonal(prefs, "About me").startsWith("# About me\n")).toBe(true);
+  });
+
+  it("doesn't add usage notes to coding tools", () => {
+    expect(target("claude").render(prefs)).not.toContain("How to use this");
+  });
+
+  it("avoids override phrasing that injection scanners flag", () => {
+    for (const id of ["muse", "instinct", "dots", "grok", "openclaw", "hermes"]) {
+      expect(target(id).render(prefs)).not.toMatch(/ignore (all |any )?(previous|prior)|system prompt/i);
+    }
+  });
+});
+
+describe("renderPortable", () => {
+  it("is stable, so sync sees an unchanged profile as in sync", () => {
+    const prefs = "# User Preferences (from you.md)\n\n## Style\n\nShort.";
+    expect(renderPortable(prefs)).toBe(renderPortable(prefs));
+    expect(renderPortable(prefs).endsWith("Short.\n")).toBe(true);
+  });
+});
+
+describe("targetNotes", () => {
+  it("includes the handoff for cloud agents and nothing for local tools", () => {
+    expect(targetNotes(target("muse"), 10)[0]).toMatch(/^→ /);
+    expect(targetNotes(target("claude"), 10)).toEqual([]);
+  });
+
+  it("warns when content exceeds a tool's character limit", () => {
+    const notes = targetNotes(target("openclaw"), 25_000);
+    expect(notes.some(n => n.includes("truncates"))).toBe(true);
+    expect(targetNotes(target("openclaw"), 5_000)).toEqual([]);
   });
 });
 
 describe("EXPORT_TARGETS", () => {
   it("covers the expected tools", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
-    expect(ids).toEqual(["agents", "claude", "codex", "cursor", "gemini", "instinct", "muse", "windsurf"]);
+    expect(ids).toEqual([
+      "agents",
+      "claude",
+      "codex",
+      "cursor",
+      "dots",
+      "gemini",
+      "grok",
+      "hermes",
+      "instinct",
+      "muse",
+      "openclaw",
+      "windsurf",
+    ]);
   });
 
   it("has unique ids and paths", () => {

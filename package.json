@@ -1,7 +1,7 @@
 {
   "name": "@brainsparker/you-md",
   "version": "0.2.1",
-  "description": "A skill that makes every AI tool know you — portable preferences and context across Claude Code, Cursor, Windsurf, and more",
+  "description": "A skill that makes every AI tool and agent know you — portable personal context across Claude Code, Cursor, OpenClaw, Hermes, Muse, ChatGPT dots, and more",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -51,6 +51,9 @@
     "claude",
     "claude-code",
     "windsurf",
+    "openclaw",
+    "hermes",
+    "personal-agent",
     "preferences",
     "context",
     "skill",
