@@ -33,6 +33,11 @@
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
  * See `you-md sync` for detecting and repairing drift after you.md edits.
+ *
+ * Not every section belongs in every target. A `visibility` map in the
+ * profile's frontmatter decides which audience sees which section (coding
+ * tools, personal agents, or only files that stay on this machine). See
+ * src/core/visibility.ts. Export and sync apply the same rules.
  */
 
 import { readFile, writeFile, mkdir, copyFile, rename } from "node:fs/promises"
@@ -41,7 +46,12 @@ import { resolve, dirname } from "node:path"
 import { homedir } from "node:os"
 
 import { createParser } from "../../parser/index.js"
-import { formatProfileForContext, type FormattableProfile } from "../../core/formatter.js"
+import { formatProfileForContext } from "../../core/formatter.js"
+import {
+  filterProfileForAudience,
+  type Audience,
+  type VisibilityAwareProfile,
+} from "../../core/visibility.js"
 import type { CliFlags } from "../args.js"
 
 // ---------------------------------------------------------------------------
@@ -174,6 +184,12 @@ export interface ExportTarget {
   /** Render the final file (own-file) or block content (managed-block) */
   render: (prefs: string) => string
   /**
+   * Who reads this file. Drives section visibility: `kind` separates coding
+   * tools from personal agents, `shared` marks files that leave this machine
+   * (committed project files, portable copies handed to cloud agents).
+   */
+  audience: Audience
+  /**
    * Cloud agents can't read local files. For these, the export is a portable
    * copy and `handoff` tells the user how to get it into the agent.
    */
@@ -185,6 +201,7 @@ export interface ExportTarget {
 export const EXPORT_TARGETS: ExportTarget[] = [
   {
     id: "claude",
+    audience: { kind: "coding", shared: false },
     name: "Claude Code",
     scope: "user",
     relPath: [".claude", "CLAUDE.md"],
@@ -193,6 +210,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "codex",
+    audience: { kind: "coding", shared: false },
     name: "Codex CLI",
     scope: "user",
     relPath: [".codex", "AGENTS.md"],
@@ -201,6 +219,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "gemini",
+    audience: { kind: "coding", shared: false },
     name: "Gemini CLI",
     scope: "user",
     relPath: [".gemini", "GEMINI.md"],
@@ -209,6 +228,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "windsurf",
+    audience: { kind: "coding", shared: false },
     name: "Windsurf",
     scope: "user",
     relPath: [".codeium", "windsurf", "memories", "global_rules.md"],
@@ -217,6 +237,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "cursor",
+    audience: { kind: "coding", shared: true },
     name: "Cursor",
     scope: "project",
     relPath: [".cursor", "rules", "you-md.mdc"],
@@ -236,6 +257,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "agents",
+    audience: { kind: "coding", shared: true },
     name: "Project AGENTS.md",
     scope: "project",
     relPath: ["AGENTS.md"],
@@ -244,6 +266,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "openclaw",
+    audience: { kind: "personal", shared: false },
     name: "OpenClaw",
     scope: "user",
     relPath: [".openclaw", "workspace", "USER.md"],
@@ -253,6 +276,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "hermes",
+    audience: { kind: "personal", shared: false },
     name: "Hermes Agent",
     scope: "user",
     relPath: [".hermes", "SOUL.md"],
@@ -262,6 +286,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "muse",
+    audience: { kind: "personal", shared: true },
     name: "Muse (Meta)",
     scope: "user",
     relPath: [".you-md", "portable", "muse.md"],
@@ -271,6 +296,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "instinct",
+    audience: { kind: "personal", shared: true },
     name: "Instinct",
     scope: "user",
     relPath: [".you-md", "portable", "instinct.md"],
@@ -281,6 +307,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "dots",
+    audience: { kind: "personal", shared: true },
     name: "ChatGPT dots",
     scope: "user",
     relPath: [".you-md", "portable", "chatgpt-dots.md"],
@@ -290,6 +317,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
   },
   {
     id: "grok",
+    audience: { kind: "personal", shared: true },
     name: "Grok Bot",
     scope: "user",
     relPath: [".you-md", "portable", "grok-bot.md"],
@@ -313,6 +341,33 @@ export interface ExportPaths {
 export function resolveTargetPath(target: ExportTarget, paths?: ExportPaths): string {
   const base = target.scope === "user" ? (paths?.home ?? homedir()) : (paths?.cwd ?? process.cwd())
   return resolve(base, ...target.relPath)
+}
+
+// ---------------------------------------------------------------------------
+// Per-target rendering
+// ---------------------------------------------------------------------------
+
+export interface TargetPrefs {
+  /** Formatted preferences containing only what this target may see */
+  prefs: string
+  /** Section titles held back by the profile's visibility map */
+  hidden: string[]
+}
+
+/**
+ * Format the profile for one target, applying its section visibility.
+ * Every target starts from the same profile; this is where the audience
+ * decides which sections make it into the file.
+ */
+export function renderPrefsFor(profile: VisibilityAwareProfile, target: ExportTarget): TargetPrefs {
+  const { profile: visible, hidden } = filterProfileForAudience(profile, target.audience)
+  return { prefs: formatProfileForContext(visible), hidden }
+}
+
+/** One-line note listing what a target did not receive. */
+export function hiddenNote(hidden: string[]): string | null {
+  if (hidden.length === 0) return null
+  return `held back by visibility: ${hidden.join(", ")}`
 }
 
 // ---------------------------------------------------------------------------
@@ -453,8 +508,20 @@ ${cloud}
 
 Exports are idempotent. Managed content lives between you-md markers,
 so your own notes in the same file are preserved on re-export. Your
-context is yours: every target gets the same profile, and 'you-md sync'
-keeps all of them current.`
+context is yours: every target starts from the same profile, and
+'you-md sync' keeps all of them current.
+
+Not every section has to go everywhere. Add a visibility map to your
+you.md frontmatter to keep sections out of files that get committed or
+handed to a cloud agent:
+
+  visibility:
+    Boundaries: private               # stays on this machine
+    Context: personal                 # personal agents only
+    Code Review Preferences: coding   # coding tools only
+
+Values: everywhere (default), coding, personal, private. Export prints
+what each target held back; --dry-run --verbose shows the exact content.`
 }
 
 export async function exportCommand(
@@ -497,7 +564,7 @@ export async function exportCommand(
     return 1
   }
 
-  const prefs = formatProfileForContext(result.profile as FormattableProfile)
+  const profile = result.profile as unknown as VisibilityAwareProfile
 
   // Dry run: report what would happen, write nothing
   if (flags.dryRun) {
@@ -507,10 +574,14 @@ export async function exportCommand(
       const action = existsSync(path) ? "update" : "create"
       console.log(`  ${target.name.padEnd(22)} would ${action}  ${path}`)
       if (target.handoff) console.log(`  ${"".padEnd(22)} → ${target.handoff}`)
+      const note = hiddenNote(renderPrefsFor(profile, target).hidden)
+      if (note) console.log(`  ${"".padEnd(22)} ${note}`)
     }
     if (flags.verbose) {
-      console.log("\nContent that would be exported:\n")
-      console.log(buildManagedBlock(prefs))
+      for (const target of targets) {
+        console.log(`\nContent that would be exported to ${target.name}:\n`)
+        console.log(buildManagedBlock(renderPrefsFor(profile, target).prefs))
+      }
     }
     return 0
   }
@@ -519,12 +590,15 @@ export async function exportCommand(
   let failures = 0
   for (const target of targets) {
     try {
+      const { prefs, hidden } = renderPrefsFor(profile, target)
       const { path, action, chars } = await exportToTarget(target, prefs, paths, flags.output)
       if (!flags.quiet) {
         console.log(`✓ ${target.name.padEnd(22)} ${action}  ${path}`)
         for (const note of targetNotes(target, chars)) {
           console.log(`  ${"".padEnd(22)} ${note}`)
         }
+        const note = hiddenNote(hidden)
+        if (note) console.log(`  ${"".padEnd(22)} ${note}`)
       }
       // Exporting a project AGENTS.md also bridges the project CLAUDE.md to
       // it (via an @AGENTS.md import), so Claude Code reads the same content.

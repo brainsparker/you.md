@@ -13,6 +13,9 @@ import {
   renderPortable,
   renderPersonal,
   targetNotes,
+  renderPrefsFor,
+  hiddenNote,
+  exportCommand,
   type ExportTarget,
 } from "../../src/cli/commands/export";
 
@@ -293,5 +296,114 @@ describe("EXPORT_TARGETS", () => {
 
     const paths = new Set(EXPORT_TARGETS.map(t => `${t.scope}:${t.relPath.join("/")}`));
     expect(paths.size).toBe(EXPORT_TARGETS.length);
+  });
+});
+
+describe("section visibility across targets", () => {
+  it("classifies every target by audience: committed files and cloud copies are shared", () => {
+    const shared = EXPORT_TARGETS.filter(t => t.audience.shared).map(t => t.id).sort();
+    expect(shared).toEqual(["agents", "cursor", "dots", "grok", "instinct", "muse"]);
+
+    const personal = EXPORT_TARGETS.filter(t => t.audience.kind === "personal").map(t => t.id).sort();
+    expect(personal).toEqual(["dots", "grok", "hermes", "instinct", "muse", "openclaw"]);
+
+    // Every project-scoped file is shared: it lands in a repo.
+    for (const t of EXPORT_TARGETS.filter(t => t.scope === "project")) {
+      expect(t.audience.shared).toBe(true);
+    }
+    // Every cloud handoff is shared: it leaves the machine.
+    for (const t of EXPORT_TARGETS.filter(t => t.handoff)) {
+      expect(t.audience.shared).toBe(true);
+    }
+  });
+
+  const profile = {
+    metadata: {
+      visibility: { Boundaries: "private", Context: "personal", "Code Review Preferences": "coding" },
+    },
+    sections: new Map([
+      ["how i work", { title: "How I Work", content: "Ship small.", subsections: [] }],
+      ["code review preferences", { title: "Code Review Preferences", content: "Flag security issues.", subsections: [] }],
+      ["context", { title: "Context", content: "Timezone: Europe/Berlin", subsections: [] }],
+      ["boundaries", { title: "Boundaries", content: "Never mention my health.", subsections: [] }],
+    ]),
+  };
+
+  it("renders each target its own view of the profile", () => {
+    const agents = renderPrefsFor(profile, target("agents"));
+    expect(agents.prefs).toContain("Flag security issues.");
+    expect(agents.prefs).not.toContain("Europe/Berlin");
+    expect(agents.prefs).not.toContain("my health");
+    expect(agents.hidden).toEqual(["Context", "Boundaries"]);
+
+    const claude = renderPrefsFor(profile, target("claude"));
+    expect(claude.prefs).toContain("my health");
+    expect(claude.hidden).toEqual(["Context"]);
+
+    const muse = renderPrefsFor(profile, target("muse"));
+    expect(muse.prefs).toContain("Europe/Berlin");
+    expect(muse.prefs).not.toContain("Flag security issues.");
+    expect(muse.prefs).not.toContain("my health");
+    expect(muse.hidden).toEqual(["Code Review Preferences", "Boundaries"]);
+
+    const openclaw = renderPrefsFor(profile, target("openclaw"));
+    expect(openclaw.prefs).toContain("my health");
+    expect(openclaw.hidden).toEqual(["Code Review Preferences"]);
+  });
+
+  it("renders the full profile for every target when nothing is declared", () => {
+    const plain = { metadata: {}, sections: profile.sections };
+    for (const t of EXPORT_TARGETS) {
+      const { prefs, hidden } = renderPrefsFor(plain, t);
+      expect(hidden).toEqual([]);
+      expect(prefs).toContain("my health");
+    }
+  });
+
+  it("summarises what was held back in one line", () => {
+    expect(hiddenNote([])).toBeNull();
+    expect(hiddenNote(["Boundaries", "Context"])).toBe("held back by visibility: Boundaries, Context");
+  });
+
+  it("keeps a private section out of the committed AGENTS.md but in the global CLAUDE.md on disk", async () => {
+    writeFileSync(
+      join(cwd, ".you.md"),
+      [
+        "---",
+        'schema_version: "1.1"',
+        "visibility:",
+        "  Boundaries: private",
+        "---",
+        "",
+        "# Me",
+        "",
+        "## How I Work",
+        "",
+        "Ship small.",
+        "",
+        "## Boundaries",
+        "",
+        "Never mention my health.",
+        "",
+      ].join("\n")
+    );
+
+    const prevCwd = process.cwd();
+    const prevHome = process.env.HOME;
+    process.chdir(cwd);
+    process.env.HOME = home;
+    try {
+      expect(await exportCommand(["agents", "claude"], { quiet: true }, { home, cwd })).toBe(0);
+      const agentsMd = readFileSync(join(cwd, "AGENTS.md"), "utf-8");
+      expect(agentsMd).toContain("Ship small.");
+      expect(agentsMd).not.toContain("my health");
+
+      const claudeMd = readFileSync(join(home, ".claude", "CLAUDE.md"), "utf-8");
+      expect(claudeMd).toContain("Ship small.");
+      expect(claudeMd).toContain("my health");
+    } finally {
+      process.chdir(prevCwd);
+      process.env.HOME = prevHome;
+    }
   });
 });

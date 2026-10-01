@@ -9,6 +9,7 @@ import {
   KNOWN_SECTIONS,
   SENSITIVE_PATTERNS,
 } from "../utils/constants";
+import { parseVisibility, VISIBILITY_VALUES } from "./visibility";
 
 /**
  * Validate a you.md profile against schema requirements.
@@ -31,6 +32,9 @@ export function validateProfile(profile: YouMdProfile): ValidationResult {
 
   // Check metadata fields
   validateMetadata(profile, errors, warnings);
+
+  // Check the section visibility map
+  validateVisibility(profile, errors, warnings);
 
   return {
     valid: errors.length === 0,
@@ -213,6 +217,59 @@ function validateMetadata(
         message: "Tags must be an array",
         path: "metadata.tags",
         suggestion: 'Use array format: tags: ["coding", "python"]',
+      });
+    }
+  }
+}
+
+/**
+ * Validate the frontmatter visibility map.
+ *
+ * Unknown values are errors, not warnings: export treats them as private
+ * (fail closed), which is safe but almost certainly not what the author
+ * meant. Titles that match no section are warnings, since a section may
+ * live in another profile that gets merged in.
+ */
+function validateVisibility(
+  profile: YouMdProfile,
+  errors: ValidationError[],
+  warnings: ValidationWarning[]
+): void {
+  if (profile.metadata.visibility === undefined) return;
+
+  const map = parseVisibility(profile.metadata as Record<string, unknown>);
+  const allowed = VISIBILITY_VALUES.join(" | ");
+
+  if (map.malformed) {
+    errors.push({
+      code: "INVALID_VISIBILITY",
+      message: "visibility must be a map of section title to visibility",
+      path: "metadata.visibility",
+    });
+    return;
+  }
+
+  for (const problem of map.invalid) {
+    errors.push({
+      code: "INVALID_VISIBILITY",
+      message: `Unknown visibility "${problem.value}" for section "${problem.title}" (expected ${allowed}). The section is treated as private until this is fixed.`,
+      path: `metadata.visibility.${problem.title}`,
+    });
+  }
+
+  const titles = new Set<string>();
+  for (const [key, section] of profile.sections) {
+    titles.add(key);
+    for (const sub of section.subsections) titles.add(sub.normalizedTitle);
+  }
+
+  for (const title of map.rules.keys()) {
+    if (!titles.has(title)) {
+      warnings.push({
+        code: "VISIBILITY_UNKNOWN_SECTION",
+        message: `visibility names a section that is not in this profile: "${title}"`,
+        path: "metadata.visibility",
+        suggestion: "Check the spelling against your section headings",
       });
     }
   }

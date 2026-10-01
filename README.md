@@ -89,6 +89,7 @@ It is ordinary Markdown with small YAML frontmatter—easy for people to inspect
 - **Works with and without MCP.** Connect supported apps directly or export to the native instruction files they already read.
 - **Project-aware.** Keep personal defaults in `~/.you.md` and use a project-local `.you.md` when a repository needs different context.
 - **Designed against drift.** Managed export blocks preserve your other instructions, and `you-md sync --check` catches stale copies in CI.
+- **You decide what goes where.** A `visibility` map keeps personal sections out of committed `AGENTS.md` files and coding preferences out of your personal agents.
 - **Useful as infrastructure.** The typed TypeScript API parses, validates, merges, and extracts personalization signals for your own products.
 
 ## Integrations
@@ -161,6 +162,31 @@ Use the check mode as a CI drift gate:
 ```
 
 `sync` does not create new targets. Run `you-md export <target>` once to opt a file into management.
+
+## Decide what goes where
+
+One profile ends up in very different places: a project `AGENTS.md` that gets committed and read by teammates, a global `CLAUDE.md` on your own machine, and a portable copy you paste into Muse or text to Instinct. Not every section belongs in all of them. Declare it once in frontmatter, keyed by section title:
+
+```yaml
+---
+schema_version: "1.1"
+visibility:
+  Boundaries: private               # never leaves this machine
+  Context: personal                 # personal agents only
+  Code Review Preferences: coding   # coding tools only
+---
+```
+
+| Value | Reaches |
+| --- | --- |
+| `everywhere` (default) | Every target |
+| `coding` | Coding tools: Claude Code, Codex, Gemini CLI, Windsurf, Cursor, `AGENTS.md` |
+| `personal` | Personal agents: OpenClaw, Hermes, Muse, Instinct, ChatGPT dots, Grok Bot |
+| `private` | Only files that stay on this machine: your global instruction files and the MCP server. Never a committed project file (`AGENTS.md`, `.cursor/rules`), never a portable copy handed to a cloud agent |
+
+Titles match case-insensitively and can name a nested heading (for example `Testing` under `Technical Preferences`). `you-md export` prints what each target held back, and `you-md export --all --dry-run --verbose` shows the exact content per target. `you-md sync` applies the same rules, so tightening a section's visibility makes every file that still carries it show up as stale, and sync removes it from those files.
+
+A misspelled value is an error in `you-md validate` and is treated as `private` until you fix it, so a typo can never widen where a section goes.
 
 ## Profiles and precedence
 
