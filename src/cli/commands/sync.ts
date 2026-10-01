@@ -23,7 +23,7 @@ import { readFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 
 import { createParser } from "../../parser/index.js"
-import { formatProfileForContext, type FormattableProfile } from "../../core/formatter.js"
+import type { VisibilityAwareProfile } from "../../core/visibility.js"
 import type { CliFlags } from "../args.js"
 import {
   BEGIN_MARKER,
@@ -32,6 +32,7 @@ import {
   buildManagedBlock,
   exportToTarget,
   resolveTargetPath,
+  renderPrefsFor,
   ensureClaudeBridge,
   claudeBridgePath,
   type ExportPaths,
@@ -116,6 +117,11 @@ you-md owns outright, like Cursor's .mdc rule and the portable copies for
 cloud agents; refreshed portable copies need to be handed over again). It never creates new export
 targets: run 'you-md export <target>' first to add one.
 
+Section visibility is applied per target, exactly as in export. Marking a
+section private or personal in your you.md frontmatter makes every committed
+or coding-tool copy that still carries it show up as stale, and sync removes
+it from those files.
+
 When a project AGENTS.md is managed by you-md, sync also keeps the project
 CLAUDE.md bridged to it with an '@AGENTS.md' import line, so Claude Code
 reads the same instructions every AGENTS.md-native tool reads.`
@@ -145,7 +151,7 @@ export async function syncCommand(
     return 1
   }
 
-  const prefs = formatProfileForContext(result.profile as FormattableProfile)
+  const profile = result.profile as unknown as VisibilityAwareProfile
 
   const reports: TargetReport[] = []
   let failures = 0
@@ -153,6 +159,10 @@ export async function syncCommand(
   for (const target of EXPORT_TARGETS) {
     const path = resolveTargetPath(target, paths)
     const existing = existsSync(path) ? await readFile(path, "utf-8") : null
+    // Each target sees its own view of the profile (section visibility), so
+    // tightening a section's visibility shows up as drift in the files that
+    // should no longer carry it.
+    const { prefs } = renderPrefsFor(profile, target)
     const fresh =
       target.mode === "own-file"
         ? target.render(prefs)

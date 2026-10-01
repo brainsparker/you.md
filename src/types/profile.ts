@@ -52,6 +52,12 @@ export interface ProfileMetadata {
   /** Optional: Categorization tags */
   readonly tags?: string[];
 
+  /**
+   * Optional: section title to visibility ("everywhere" | "coding" |
+   * "personal" | "private"). Controls which export targets see a section.
+   */
+  readonly visibility?: Record<string, string>;
+
   /** Allow additional custom fields */
   readonly [key: string]: unknown;
 }

@@ -56,6 +56,23 @@ export { discoverProfilePath, getDefaultSearchPaths } from "./core/discovery";
 export { mergeProfiles } from "./core/merger";
 export { validateProfile, isValidProfile } from "./core/validator";
 
+// Section visibility (which export targets see which sections)
+export {
+  parseVisibility,
+  isVisible,
+  visibilityFor,
+  filterProfileForAudience,
+  describeVisibility,
+  VISIBILITY_VALUES,
+  DEFAULT_VISIBILITY,
+} from "./core/visibility";
+export type {
+  Visibility,
+  Audience,
+  VisibilityMap,
+  FilteredProfile,
+} from "./core/visibility";
+
 // Personalization signal extraction
 export {
   extractIdentitySignals,

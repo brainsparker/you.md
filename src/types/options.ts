@@ -132,7 +132,8 @@ export type ValidationErrorCode =
   | "FILE_TOO_LARGE"
   | "PARSE_TIMEOUT"
   | "INVALID_FIELD_TYPE"
-  | "REQUIRED_FIELD_MISSING";
+  | "REQUIRED_FIELD_MISSING"
+  | "INVALID_VISIBILITY";
 
 /**
  * Validation warning codes
@@ -144,4 +145,5 @@ export type ValidationWarningCode =
   | "EMPTY_SECTION"
   | "DUPLICATE_SECTION"
   | "INVALID_DATE_FORMAT"
-  | "LARGE_FILE_SIZE";
+  | "LARGE_FILE_SIZE"
+  | "VISIBILITY_UNKNOWN_SECTION";

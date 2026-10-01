@@ -12,6 +12,9 @@ schema_version: "${CURRENT_SCHEMA_VERSION}"
 created: "${today}"
 last_updated: "${today}"
 privacy_level: "private"
+# Keep a section out of committed files and cloud agents (everywhere | coding | personal | private):
+# visibility:
+#   Boundaries: private
 ---
 
 # Me

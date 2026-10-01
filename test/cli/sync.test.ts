@@ -188,3 +188,41 @@ describe("syncCommand end to end", () => {
     }
   });
 });
+
+describe("sync applies section visibility", () => {
+  const OPEN =
+    '---\nschema_version: "1.1"\n---\n\n# Me\n\n## How I Work\n\nShip small.\n\n## Boundaries\n\nNever mention my health.\n';
+  const TIGHTENED =
+    '---\nschema_version: "1.1"\nvisibility:\n  Boundaries: private\n---\n\n# Me\n\n## How I Work\n\nShip small.\n\n## Boundaries\n\nNever mention my health.\n';
+
+  it("sees a newly private section as drift in the committed file only, and removes it on sync", async () => {
+    writeFileSync(join(cwd, ".you.md"), OPEN);
+
+    const prevCwd = process.cwd();
+    const prevHome = process.env.HOME;
+    process.chdir(cwd);
+    process.env.HOME = home;
+    try {
+      expect(await exportCommand(["agents", "claude"], { quiet: true }, paths)).toBe(0);
+      expect(readFileSync(join(cwd, "AGENTS.md"), "utf-8")).toContain("my health");
+
+      // Tighten visibility without touching any section text
+      writeFileSync(join(cwd, ".you.md"), TIGHTENED);
+
+      expect(await syncCommand([], { quiet: true, check: true }, paths)).toBe(1);
+      expect(await syncCommand([], { quiet: true }, paths)).toBe(0);
+
+      const agentsMd = readFileSync(join(cwd, "AGENTS.md"), "utf-8");
+      expect(agentsMd).toContain("Ship small.");
+      expect(agentsMd).not.toContain("my health");
+
+      const claudeMd = readFileSync(join(home, ".claude", "CLAUDE.md"), "utf-8");
+      expect(claudeMd).toContain("my health");
+
+      expect(await syncCommand([], { quiet: true, check: true }, paths)).toBe(0);
+    } finally {
+      process.chdir(prevCwd);
+      process.env.HOME = prevHome;
+    }
+  });
+});

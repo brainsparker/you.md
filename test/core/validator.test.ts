@@ -199,3 +199,66 @@ describe("isValidProfile", () => {
     expect(isValidProfile(profile)).toBe(false);
   });
 });
+
+describe("visibility validation", () => {
+  const sections = new Map();
+  sections.set("boundaries", {
+    title: "Boundaries",
+    normalizedTitle: "boundaries",
+    level: 2,
+    content: "No health talk.",
+    fields: new Map(),
+    subsections: [
+      {
+        title: "Family",
+        normalizedTitle: "family",
+        level: 3,
+        content: "Two kids.",
+        fields: new Map(),
+        subsections: [],
+      },
+    ],
+  });
+
+  function withVisibility(visibility: unknown): YouMdProfile {
+    return {
+      schemaVersion: "1.1",
+      metadata: { schemaVersion: "1.1", visibility } as YouMdProfile["metadata"],
+      sections,
+      rawContent: "",
+    };
+  }
+
+  it("accepts a well-formed map naming top-level and nested sections", () => {
+    const result = validateProfile(withVisibility({ Boundaries: "private", Family: "personal" }));
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((w) => w.code === "VISIBILITY_UNKNOWN_SECTION")).toBe(false);
+  });
+
+  it("rejects unknown visibility values as errors", () => {
+    const result = validateProfile(withVisibility({ Boundaries: "secret" }));
+    expect(result.valid).toBe(false);
+    const err = result.errors.find((e) => e.code === "INVALID_VISIBILITY");
+    expect(err?.message).toContain('"secret"');
+    expect(err?.message).toContain("treated as private");
+  });
+
+  it("rejects a visibility key that is not a map", () => {
+    const result = validateProfile(withVisibility("private"));
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.code === "INVALID_VISIBILITY")).toBe(true);
+  });
+
+  it("warns when visibility names a section that does not exist", () => {
+    const result = validateProfile(withVisibility({ Boundarys: "private" }));
+    expect(result.valid).toBe(true);
+    const warning = result.warnings.find((w) => w.code === "VISIBILITY_UNKNOWN_SECTION");
+    expect(warning?.message).toContain("boundarys");
+  });
+
+  it("is silent when no visibility is declared", () => {
+    const result = validateProfile(withVisibility(undefined));
+    expect(result.errors.some((e) => e.code === "INVALID_VISIBILITY")).toBe(false);
+    expect(result.warnings.some((w) => w.code === "VISIBILITY_UNKNOWN_SECTION")).toBe(false);
+  });
+});
