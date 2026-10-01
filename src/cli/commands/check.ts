@@ -1,8 +1,11 @@
 /**
- * you-md check — verify profile existence, validity, and tool installations
+ * you-md check: verify profile existence, validity, tool installations, and
+ * which instruction files (CLAUDE.md, AGENTS.md, GEMINI.md) each coding agent
+ * will actually load from the current project.
  *
  * Usage:
- *   you-md check         Show profile status and tool installations
+ *   you-md check         Show profile status, tool installations, and precedence
+ *   you-md check --json  Same report as JSON (for scripts and CI)
  */
 
 import { existsSync } from "node:fs";
@@ -12,6 +15,12 @@ import { homedir } from "node:os";
 import type { CliFlags } from "../args.js";
 import { createParser } from "../../parser/index.js";
 import { readJsonConfig } from "./skill.js";
+import {
+  auditInstructionFiles,
+  renderInstructionAudit,
+  type InstructionAudit,
+} from "./instructions.js";
+import type { ExportPaths } from "./export.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,6 +29,8 @@ import { readJsonConfig } from "./skill.js";
 export interface CheckOptions {
   searchPaths?: string[];
   log?: (msg: string) => void;
+  /** Base directories for the instruction-file audit (injectable for tests) */
+  paths?: ExportPaths;
 }
 
 export interface CheckResult {
@@ -30,6 +41,8 @@ export interface CheckResult {
   validationWarnings: string[];
   sections: string[];
   toolsInstalled: Record<string, boolean>;
+  /** Which instruction files each coding agent loads here, and what clashes */
+  instructionFiles: InstructionAudit;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +129,12 @@ export async function runCheck(options?: CheckOptions): Promise<CheckResult> {
     log("");
     log("  Create one with: npx you-md init -i");
 
+    // The precedence audit does not need a profile: a repo with a stray
+    // CLAUDE.md shadowing AGENTS.md is worth knowing about either way.
+    const instructionFiles = await auditInstructionFiles(options?.paths);
+    log("");
+    for (const line of renderInstructionAudit(instructionFiles)) log(line);
+
     return {
       profileFound: false,
       profilePath: null,
@@ -124,6 +143,7 @@ export async function runCheck(options?: CheckOptions): Promise<CheckResult> {
       validationWarnings: [],
       sections: [],
       toolsInstalled: {},
+      instructionFiles,
     };
   }
 
@@ -208,13 +228,20 @@ export async function runCheck(options?: CheckOptions): Promise<CheckResult> {
         installed = !!(mcpServers && "you-md" in mcpServers);
       }
     } catch {
-      // Config unreadable — treat as not installed
+      // Config unreadable: treat as not installed
     }
     toolsInstalled[tool.name] = installed;
     const icon = installed ? "✓" : "○";
     const label = installed ? "skill active" : "not installed";
     log(`    ${icon} ${tool.name.padEnd(18)} ${label}`);
   }
+
+  // 5. Instruction-file precedence: what Claude Code, Codex, Gemini and
+  //    Copilot will load from this project, and where files shadow or
+  //    duplicate each other.
+  const instructionFiles = await auditInstructionFiles(options?.paths);
+  log("");
+  for (const line of renderInstructionAudit(instructionFiles)) log(line);
 
   return {
     profileFound: true,
@@ -224,6 +251,7 @@ export async function runCheck(options?: CheckOptions): Promise<CheckResult> {
     validationWarnings,
     sections,
     toolsInstalled,
+    instructionFiles,
   };
 }
 
@@ -231,7 +259,12 @@ export async function runCheck(options?: CheckOptions): Promise<CheckResult> {
 // CLI entry point
 // ---------------------------------------------------------------------------
 
-export async function checkCommand(_args: string[], _flags: CliFlags): Promise<number> {
+export async function checkCommand(_args: string[], flags: CliFlags): Promise<number> {
+  if (flags.json) {
+    const result = await runCheck({ log: () => {} });
+    console.log(JSON.stringify(result, null, 2));
+    return result.profileValid ? 0 : 1;
+  }
   const result = await runCheck();
   return result.profileValid ? 0 : 1;
 }

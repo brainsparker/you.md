@@ -177,7 +177,8 @@ Usage: you-md <command> [options] [arguments]
 
 Commands:
   skill <subcommand>       Install/manage the you.md skill in your AI tools
-  check                    Verify your profile and tool installations
+  check                    Verify your profile, tool installations, and which
+                           instruction files (CLAUDE.md, AGENTS.md) each agent loads
   init [path]              Create a new you.md file (default: ./.you.md)
   validate <path>          Validate a you.md file
   merge <paths...>         Merge multiple you.md files
@@ -205,6 +206,8 @@ Options:
 Examples:
   you-md skill install                     Install into all detected AI tools
   you-md skill status                      Check which tools have the skill
+  you-md check                             Profile status plus CLAUDE.md/AGENTS.md precedence
+  you-md check --json                      Same report as JSON
   you-md init -i                           Interactive wizard (easiest!)
   you-md init                              Create .you.md (identity template)
   you-md init --from-me                    Auto-infer profile from local environment
