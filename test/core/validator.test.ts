@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { validateProfile, isValidProfile } from "../../src/core/validator";
 import { createEmptyProfile } from "../../src/types/profile";
 import type { YouMdProfile } from "../../src/types/profile";
+import { createParser } from "../../src/parser";
 
 describe("validateProfile", () => {
   it("validates profile with correct schema version", () => {
@@ -197,5 +198,44 @@ describe("isValidProfile", () => {
     };
 
     expect(isValidProfile(profile)).toBe(false);
+  });
+});
+
+describe("audience directive validation", () => {
+  function profileWith(body: string): YouMdProfile {
+    return createParser().parse(`---\nschema_version: "1.1"\n---\n\n# Me\n\n## How I Work\n${body}\n\nText.\n`).profile;
+  }
+
+  it("accepts well-formed directives silently", () => {
+    for (const body of ["<!-- you-md: private -->", "<!-- you-md: for coding, hermes -->", "<!-- you-md: not cloud -->"]) {
+      const result = validateProfile(profileWith(body));
+      expect(result.warnings.map(w => w.code)).not.toContain("UNKNOWN_AUDIENCE");
+      expect(result.warnings.map(w => w.code)).not.toContain("INVALID_AUDIENCE_DIRECTIVE");
+    }
+  });
+
+  it("warns about a directive it cannot read", () => {
+    const result = validateProfile(profileWith("<!-- you-md: hide -->"));
+    const warning = result.warnings.find(w => w.code === "INVALID_AUDIENCE_DIRECTIVE");
+    expect(warning).toBeDefined();
+    expect(warning?.message).toContain('"hide"');
+    expect(warning?.path).toBe("sections.how i work");
+    expect(result.valid).toBe(true);
+  });
+
+  it("warns about unknown audience names and lists the known ones", () => {
+    const result = validateProfile(profileWith("<!-- you-md: for clawd, cursor -->"));
+    const warning = result.warnings.find(w => w.code === "UNKNOWN_AUDIENCE");
+    expect(warning).toBeDefined();
+    expect(warning?.message).toContain('"clawd"');
+    expect(warning?.message).toContain("no tool at all");
+    expect(warning?.suggestion).toContain("coding");
+    expect(warning?.suggestion).toContain("cursor");
+  });
+
+  it("explains the effect of an unknown name in a not rule", () => {
+    const result = validateProfile(profileWith("<!-- you-md: not grokk -->"));
+    const warning = result.warnings.find(w => w.code === "UNKNOWN_AUDIENCE");
+    expect(warning?.message).toContain("not withheld");
   });
 });

@@ -11,6 +11,7 @@ import {
 import { createParser } from "../parser/index.js";
 import { getDefaultTemplate } from "../cli/templates/default.js";
 import { formatProfileForContext, type FormattableProfile } from "../core/formatter.js";
+import { scopeProfile, KNOWN_TARGET_IDS, MCP_TARGET_ID } from "../core/audience.js";
 import { writeFile } from "node:fs/promises";
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -482,11 +483,17 @@ export async function createMcpServer(): Promise<Server> {
 }
 
 /**
- * Format a profile for injection into AI context.
- * Delegates to the shared formatter used by the CLI export command.
+ * Format a profile for injection into AI context, scoped to the consumer.
+ *
+ * The MCP server runs locally, so by default it reads as the "mcp" pseudo
+ * target (local and coding groups): sections marked private are included,
+ * sections scoped to cloud agents are not. When the caller names a tool the
+ * export command also knows (cursor, claude, windsurf), that id is used so
+ * MCP and `you-md export` agree on what the tool sees.
  */
-function formatPreferencesForContext(profile: FormattableProfile): string {
-  return formatProfileForContext(profile);
+function formatPreferencesForContext(profile: FormattableProfile, consumer: string = MCP_TARGET_ID): string {
+  const targetId = KNOWN_TARGET_IDS.includes(consumer) ? consumer : MCP_TARGET_ID;
+  return formatProfileForContext(scopeProfile(profile, targetId).profile);
 }
 
 type Profile = FormattableProfile
@@ -523,7 +530,7 @@ function buildSummary(profile: Profile): string {
  * Generate a tool-specific configuration snippet from the user's profile
  */
 function buildToolConfig(profile: Profile, tool: string): string {
-  const prefs = formatPreferencesForContext(profile)
+  const prefs = formatPreferencesForContext(profile, tool)
 
   switch (tool) {
     case "cursor":

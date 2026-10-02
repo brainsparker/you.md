@@ -13,8 +13,12 @@ import {
   renderPortable,
   renderPersonal,
   targetNotes,
+  renderPrefsForTarget,
+  withheldNote,
+  exportCommand,
   type ExportTarget,
 } from "../../src/cli/commands/export";
+import { createParser } from "../../src/parser";
 
 const tempDir = join(tmpdir(), `you-md-export-test-${Date.now()}`);
 const home = join(tempDir, "home");
@@ -293,5 +297,98 @@ describe("EXPORT_TARGETS", () => {
 
     const paths = new Set(EXPORT_TARGETS.map(t => `${t.scope}:${t.relPath.join("/")}`));
     expect(paths.size).toBe(EXPORT_TARGETS.length);
+  });
+});
+
+describe("audience scoping in export", () => {
+  const PROFILE = [
+    "---",
+    'schema_version: "1.1"',
+    "---",
+    "",
+    "# Me",
+    "",
+    "## What I Do",
+    "",
+    "Product manager.",
+    "",
+    "## Health",
+    "<!-- you-md: private -->",
+    "",
+    "Nut allergy.",
+    "",
+    "## How I Work",
+    "<!-- you-md: for coding -->",
+    "",
+    "Prefer TypeScript.",
+    "",
+  ].join("\n");
+
+  function profile() {
+    const result = createParser().parse(PROFILE);
+    expect(result.success).toBe(true);
+    return result.profile;
+  }
+
+  it("renders each target from the sections it may see", () => {
+    const claude = renderPrefsForTarget(profile(), "claude");
+    expect(claude.prefs).toContain("Nut allergy");
+    expect(claude.prefs).toContain("Prefer TypeScript");
+    expect(claude.withheld).toEqual([]);
+
+    const hermes = renderPrefsForTarget(profile(), "hermes");
+    expect(hermes.prefs).toContain("Nut allergy");
+    expect(hermes.prefs).not.toContain("Prefer TypeScript");
+    expect(hermes.withheld).toEqual([{ title: "How I Work", rule: "for coding" }]);
+
+    const muse = renderPrefsForTarget(profile(), "muse");
+    expect(muse.prefs).toContain("Product manager");
+    expect(muse.prefs).not.toContain("Nut allergy");
+    expect(muse.prefs).not.toContain("Prefer TypeScript");
+    expect(muse.withheld.map(w => w.title)).toEqual(["Health", "How I Work"]);
+  });
+
+  it("never writes a directive line into any target file", async () => {
+    for (const t of EXPORT_TARGETS) {
+      const { prefs } = renderPrefsForTarget(profile(), t.id);
+      const { path } = await exportToTarget(t, prefs, { home, cwd });
+      const written = readFileSync(path, "utf-8");
+      expect(written, `directive leaked into ${t.id}`).not.toMatch(/<!--\s*you-md:\s*(private|for|not)\b/);
+    }
+  });
+
+  it("keeps private content out of every portable copy and inside every local file", async () => {
+    for (const t of EXPORT_TARGETS) {
+      const { prefs } = renderPrefsForTarget(profile(), t.id);
+      const { path } = await exportToTarget(t, prefs, { home, cwd });
+      const written = readFileSync(path, "utf-8");
+      if (t.handoff) {
+        expect(written, `${t.id} is a cloud agent and must not get private sections`).not.toContain("Nut allergy");
+      } else {
+        expect(written, `${t.id} is local and should keep private sections`).toContain("Nut allergy");
+      }
+    }
+  });
+
+  it("formats the withheld note for CLI output", () => {
+    expect(withheldNote([])).toBeNull();
+    expect(
+      withheldNote([
+        { title: "Health", rule: "private" },
+        { title: "How I Work", rule: "for coding" },
+      ])
+    ).toBe("withheld: Health (private), How I Work (for coding)");
+  });
+
+  it("mentions scoping in the export help text", async () => {
+    const logs: string[] = [];
+    const original = console.log;
+    console.log = (...args: unknown[]) => logs.push(args.join(" "));
+    try {
+      expect(await exportCommand([], {})).toBe(0);
+    } finally {
+      console.log = original;
+    }
+    expect(logs.join("\n")).toContain("you-md: private");
   });
 });
