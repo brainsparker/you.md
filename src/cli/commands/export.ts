@@ -33,6 +33,12 @@
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
  * See `you-md sync` for detecting and repairing drift after you.md edits.
+ *
+ * Not every section has to go everywhere. A section can scope its audience
+ * with a comment on the line under its heading (`<!-- you-md: private -->`,
+ * `<!-- you-md: for coding -->`, `<!-- you-md: not dots, grok -->`), and each
+ * target is rendered from only the sections it is allowed to see. Withheld
+ * sections are listed in the export output. See core/audience.ts.
  */
 
 import { readFile, writeFile, mkdir, copyFile, rename } from "node:fs/promises"
@@ -41,7 +47,8 @@ import { resolve, dirname } from "node:path"
 import { homedir } from "node:os"
 
 import { createParser } from "../../parser/index.js"
-import { formatProfileForContext, type FormattableProfile } from "../../core/formatter.js"
+import { formatProfileForContext } from "../../core/formatter.js"
+import { scopeProfile, type ScopableProfile, type WithheldSection } from "../../core/audience.js"
 import type { CliFlags } from "../args.js"
 
 // ---------------------------------------------------------------------------
@@ -316,6 +323,34 @@ export function resolveTargetPath(target: ExportTarget, paths?: ExportPaths): st
 }
 
 // ---------------------------------------------------------------------------
+// Per-target rendering
+// ---------------------------------------------------------------------------
+
+export interface TargetPrefs {
+  /** Formatted preferences containing only the sections this target may see */
+  prefs: string
+  /** Sections kept back from this target by their audience directives */
+  withheld: readonly WithheldSection[]
+}
+
+/**
+ * Render the preferences text for one target, honoring audience directives.
+ * Every target starts from the same profile; what differs is which sections
+ * it is allowed to see.
+ */
+export function renderPrefsForTarget(profile: ScopableProfile, targetId: string): TargetPrefs {
+  const scoped = scopeProfile(profile, targetId)
+  return { prefs: formatProfileForContext(scoped.profile), withheld: scoped.withheld }
+}
+
+/** One-line summary of withheld sections for CLI output, or null when nothing was withheld. */
+export function withheldNote(withheld: readonly WithheldSection[]): string | null {
+  if (withheld.length === 0) return null
+  const items = withheld.map(w => (w.rule ? `${w.title} (${w.rule})` : w.title))
+  return `withheld: ${items.join(", ")}`
+}
+
+// ---------------------------------------------------------------------------
 // Write logic
 // ---------------------------------------------------------------------------
 
@@ -453,8 +488,15 @@ ${cloud}
 
 Exports are idempotent. Managed content lives between you-md markers,
 so your own notes in the same file are preserved on re-export. Your
-context is yours: every target gets the same profile, and 'you-md sync'
-keeps all of them current.`
+context is yours: every target reads from the same profile, and
+'you-md sync' keeps all of them current.
+
+Scope a section to an audience with a comment under its heading:
+  <!-- you-md: private -->          local tools only, never cloud agents
+  <!-- you-md: for coding -->       only coding tools (or list target ids)
+  <!-- you-md: not dots, grok -->   everyone except these
+Groups: all, coding, personal, local, cloud. Withheld sections are
+listed per target when you export.`
 }
 
 export async function exportCommand(
@@ -497,7 +539,7 @@ export async function exportCommand(
     return 1
   }
 
-  const prefs = formatProfileForContext(result.profile as FormattableProfile)
+  const profile = result.profile as ScopableProfile
 
   // Dry run: report what would happen, write nothing
   if (flags.dryRun) {
@@ -505,12 +547,16 @@ export async function exportCommand(
     for (const target of targets) {
       const path = flags.output ? resolve(flags.output) : resolveTargetPath(target, paths)
       const action = existsSync(path) ? "update" : "create"
+      const { prefs, withheld } = renderPrefsForTarget(profile, target.id)
       console.log(`  ${target.name.padEnd(22)} would ${action}  ${path}`)
+      const note = withheldNote(withheld)
+      if (note) console.log(`  ${"".padEnd(22)} ${note}`)
       if (target.handoff) console.log(`  ${"".padEnd(22)} → ${target.handoff}`)
-    }
-    if (flags.verbose) {
-      console.log("\nContent that would be exported:\n")
-      console.log(buildManagedBlock(prefs))
+      if (flags.verbose) {
+        console.log(`\nContent that would be exported to ${target.name}:\n`)
+        console.log(buildManagedBlock(prefs))
+        console.log("")
+      }
     }
     return 0
   }
@@ -519,9 +565,12 @@ export async function exportCommand(
   let failures = 0
   for (const target of targets) {
     try {
+      const { prefs, withheld } = renderPrefsForTarget(profile, target.id)
       const { path, action, chars } = await exportToTarget(target, prefs, paths, flags.output)
       if (!flags.quiet) {
         console.log(`✓ ${target.name.padEnd(22)} ${action}  ${path}`)
+        const note = withheldNote(withheld)
+        if (note) console.log(`  ${"".padEnd(22)} ${note}`)
         for (const note of targetNotes(target, chars)) {
           console.log(`  ${"".padEnd(22)} ${note}`)
         }

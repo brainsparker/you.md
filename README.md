@@ -89,6 +89,7 @@ It is ordinary Markdown with small YAML frontmatter—easy for people to inspect
 - **Works with and without MCP.** Connect supported apps directly or export to the native instruction files they already read.
 - **Project-aware.** Keep personal defaults in `~/.you.md` and use a project-local `.you.md` when a repository needs different context.
 - **Designed against drift.** Managed export blocks preserve your other instructions, and `you-md sync --check` catches stale copies in CI.
+- **Scoped by audience.** Mark a section `private`, or `for coding`, or `not grok`, and each tool receives only what it should.
 - **Useful as infrastructure.** The typed TypeScript API parses, validates, merges, and extracts personalization signals for your own products.
 
 ## Integrations
@@ -161,6 +162,37 @@ Use the check mode as a CI drift gate:
 ```
 
 `sync` does not create new targets. Run `you-md export <target>` once to opt a file into management.
+
+## Scope sections to the tools that should see them
+
+One profile, many audiences. Your health context belongs in your personal agent and not in Cursor; your coding conventions belong in Claude Code and not in Muse; and some things should stay on your machine. Put a comment on the line under any heading to say who gets that section:
+
+```markdown
+## Health
+<!-- you-md: private -->
+
+Nut allergy. Ask before suggesting restaurants.
+
+## How I Work
+<!-- you-md: for coding -->
+
+Prefer TypeScript in strict mode.
+
+## What I'm Into
+<!-- you-md: not dots, grok -->
+
+Long-distance cycling, modular synths.
+```
+
+| Directive | Effect |
+| --- | --- |
+| `private` | Local tools and local agents get it. Cloud agents (Muse, Instinct, ChatGPT dots, Grok Bot) do not. |
+| `for <audiences>` | Only the listed targets or groups get it. |
+| `not <audiences>` | Everyone except the listed targets or groups gets it. |
+
+Audiences are export target ids (`claude`, `cursor`, `hermes`, and the rest of the table above) or groups: `all`, `coding` (Claude Code, Codex, Gemini CLI, Windsurf, Cursor, AGENTS.md), `personal` (OpenClaw, Hermes, and the cloud agents), `local` (everything that reads a file on this machine), and `cloud` (Muse, Instinct, dots, Grok Bot). Subsections inherit their parent's directive unless they set their own.
+
+`export` and `sync` render every target from only the sections it is allowed to see, list what was withheld, and never write the directive lines themselves. The local MCP server honors the same directives and reads as a local coding tool. `you-md validate` warns about a directive it cannot read or an audience name it does not know, since a misspelled `for` would otherwise send the section nowhere.
 
 ## Profiles and precedence
 
@@ -255,6 +287,7 @@ This integration requires you to deploy a reachable MCP endpoint and configure a
 - The core CLI and local MCP workflow require no `you.md` account or hosted backend.
 - Remote profile loading is opt-in, HTTPS-only, size-limited, and blocks private-network hosts and redirects.
 - MCP write operations are restricted to the current project and the user's home directory.
+- Sections marked `<!-- you-md: private -->` are never exported to cloud personal agents, and `for` and `not` directives let you keep any section away from any tool.
 - A profile is context, not a secrets vault. Anything in it may be sent to the AI tools you connect, so never store passwords, tokens, or private keys in `you.md`.
 
 ## Development

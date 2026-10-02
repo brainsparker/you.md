@@ -23,7 +23,7 @@ import { readFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 
 import { createParser } from "../../parser/index.js"
-import { formatProfileForContext, type FormattableProfile } from "../../core/formatter.js"
+import type { ScopableProfile } from "../../core/audience.js"
 import type { CliFlags } from "../args.js"
 import {
   BEGIN_MARKER,
@@ -31,6 +31,7 @@ import {
   EXPORT_TARGETS,
   buildManagedBlock,
   exportToTarget,
+  renderPrefsForTarget,
   resolveTargetPath,
   ensureClaudeBridge,
   claudeBridgePath,
@@ -116,6 +117,9 @@ you-md owns outright, like Cursor's .mdc rule and the portable copies for
 cloud agents; refreshed portable copies need to be handed over again). It never creates new export
 targets: run 'you-md export <target>' first to add one.
 
+Audience directives (<!-- you-md: private -->, for, not) are honored per
+target, so adding one to a section marks only the affected files stale.
+
 When a project AGENTS.md is managed by you-md, sync also keeps the project
 CLAUDE.md bridged to it with an '@AGENTS.md' import line, so Claude Code
 reads the same instructions every AGENTS.md-native tool reads.`
@@ -145,7 +149,7 @@ export async function syncCommand(
     return 1
   }
 
-  const prefs = formatProfileForContext(result.profile as FormattableProfile)
+  const profile = result.profile as ScopableProfile
 
   const reports: TargetReport[] = []
   let failures = 0
@@ -153,6 +157,9 @@ export async function syncCommand(
   for (const target of EXPORT_TARGETS) {
     const path = resolveTargetPath(target, paths)
     const existing = existsSync(path) ? await readFile(path, "utf-8") : null
+    // Each target sees only the sections its audience directives allow, so
+    // drift is judged against that target's own view of the profile.
+    const { prefs } = renderPrefsForTarget(profile, target.id)
     const fresh =
       target.mode === "own-file"
         ? target.render(prefs)

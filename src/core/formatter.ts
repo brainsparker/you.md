@@ -4,7 +4,13 @@
  *
  * Used by both the MCP server (youmd_get_preferences, youmd_tool_config)
  * and the CLI export command.
+ *
+ * Audience directives (`<!-- you-md: private -->` and friends) are never
+ * rendered. Callers that know their target should scope the profile first
+ * with scopeProfile(); the stripping here is a safety net for the rest.
  */
+
+import { stripDirectives } from "./audience";
 
 /**
  * The minimal structural shape needed to format a profile.
@@ -40,15 +46,17 @@ export function formatProfileForContext(profile: FormattableProfile): string {
   for (const [, section] of profile.sections) {
     lines.push(`## ${section.title}`);
     lines.push("");
-    if (section.content) {
-      lines.push(section.content);
+    const content = stripDirectives(section.content);
+    if (content) {
+      lines.push(content);
       lines.push("");
     }
     for (const sub of section.subsections) {
       lines.push(`### ${sub.title}`);
       lines.push("");
-      if (sub.content) {
-        lines.push(sub.content);
+      const subContent = stripDirectives(sub.content);
+      if (subContent) {
+        lines.push(subContent);
         lines.push("");
       }
     }

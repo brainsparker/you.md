@@ -9,6 +9,7 @@ import {
   KNOWN_SECTIONS,
   SENSITIVE_PATTERNS,
 } from "../utils/constants";
+import { findDirective, unknownAudiences, audienceNames } from "./audience";
 
 /**
  * Validate a you.md profile against schema requirements.
@@ -28,6 +29,9 @@ export function validateProfile(profile: YouMdProfile): ValidationResult {
 
   // Check for sensitive data
   checkSensitiveData(profile, warnings);
+
+  // Check audience directives
+  validateAudienceDirectives(profile, warnings);
 
   // Check metadata fields
   validateMetadata(profile, errors, warnings);
@@ -79,6 +83,51 @@ function validateSchemaVersion(
       message: `Unsupported schema version: "${version}". Supported major versions: ${SUPPORTED_SCHEMA_VERSIONS.map((v) => v.split(".")[0]).join(", ")}`,
       path: "metadata.schema_version",
     });
+  }
+}
+
+/**
+ * Validate audience directives (`<!-- you-md: for claude, cursor -->`).
+ *
+ * A directive that fails to parse is ignored at export time, which means the
+ * section goes everywhere. A misspelled audience name expands to nothing,
+ * which for a "for" rule means the section goes nowhere. Both are worth a
+ * warning before the user finds out from a tool that did or did not see it.
+ */
+function validateAudienceDirectives(
+  profile: YouMdProfile,
+  warnings: ValidationWarning[]
+): void {
+  for (const [key, section] of profile.sections) {
+    const directive = findDirective(section.content);
+    if (!directive) continue;
+
+    if (!directive.rule) {
+      warnings.push({
+        code: "INVALID_AUDIENCE_DIRECTIVE",
+        message: `Section "${section.title}" has an audience directive that could not be read: "${directive.raw}"`,
+        path: `sections.${key}`,
+        suggestion:
+          'Use "private", "for <audiences>", or "not <audiences>", for example <!-- you-md: for coding -->',
+      });
+      continue;
+    }
+
+    const unknown = unknownAudiences(directive.rule);
+    if (unknown.length > 0) {
+      const effect =
+        directive.rule.kind === "for"
+          ? "so the section may reach no tool at all"
+          : "so the section is not withheld from the tool you meant";
+      warnings.push({
+        code: "UNKNOWN_AUDIENCE",
+        message: `Section "${section.title}" names unknown audience${unknown.length === 1 ? "" : "s"} ${unknown
+          .map(a => `"${a}"`)
+          .join(", ")}, ${effect}`,
+        path: `sections.${key}`,
+        suggestion: `Known audiences: ${audienceNames().join(", ")}`,
+      });
+    }
   }
 }
 

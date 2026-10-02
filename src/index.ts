@@ -56,6 +56,28 @@ export { discoverProfilePath, getDefaultSearchPaths } from "./core/discovery";
 export { mergeProfiles } from "./core/merger";
 export { validateProfile, isValidProfile } from "./core/validator";
 
+// Audience scoping (which sections reach which tool)
+export {
+  scopeProfile,
+  findDirective,
+  parseAudienceRule,
+  stripDirectives,
+  audienceIncludes,
+  expandAudiences,
+  audienceNames,
+  unknownAudiences,
+  describeRule,
+  AUDIENCE_GROUPS,
+  KNOWN_TARGET_IDS,
+  MCP_TARGET_ID,
+} from "./core/audience";
+export type {
+  AudienceRule,
+  AudienceGroup,
+  ScopeResult,
+  WithheldSection,
+} from "./core/audience";
+
 // Personalization signal extraction
 export {
   extractIdentitySignals,

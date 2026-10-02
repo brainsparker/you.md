@@ -188,3 +188,39 @@ describe("syncCommand end to end", () => {
     }
   });
 });
+
+describe("sync honors audience directives per target", () => {
+  const OPEN =
+    '---\nschema_version: "1.1"\n---\n\n# you.md\n\n## About Me\n\nProduct manager.\n\n## Health\n\nNut allergy.\n';
+  const SCOPED =
+    '---\nschema_version: "1.1"\n---\n\n# you.md\n\n## About Me\n\nProduct manager.\n\n## Health\n<!-- you-md: private -->\n\nNut allergy.\n';
+
+  it("marks only the cloud copies stale when a section becomes private", async () => {
+    writeFileSync(join(cwd, ".you.md"), OPEN);
+
+    const prevCwd = process.cwd();
+    const prevHome = process.env.HOME;
+    process.chdir(cwd);
+    process.env.HOME = home;
+    try {
+      expect(await exportCommand(["claude", "muse"], { quiet: true }, paths)).toBe(0);
+      const musePath = resolveTargetPath(target("muse"), paths);
+      const claudePath = resolveTargetPath(target("claude"), paths);
+      expect(readFileSync(musePath, "utf-8")).toContain("Nut allergy");
+
+      // Scoping the section changes what Muse should see, not what Claude sees
+      writeFileSync(join(cwd, ".you.md"), SCOPED);
+      expect(await syncCommand([], { quiet: true, check: true }, paths)).toBe(1);
+
+      const claudeBefore = readFileSync(claudePath, "utf-8");
+      expect(await syncCommand([], { quiet: true }, paths)).toBe(0);
+      expect(readFileSync(claudePath, "utf-8")).toBe(claudeBefore);
+      expect(readFileSync(musePath, "utf-8")).not.toContain("Nut allergy");
+      expect(readFileSync(musePath, "utf-8")).not.toMatch(/<!--\s*you-md:\s*private/);
+      expect(await syncCommand([], { quiet: true, check: true }, paths)).toBe(0);
+    } finally {
+      process.chdir(prevCwd);
+      process.env.HOME = prevHome;
+    }
+  });
+});
