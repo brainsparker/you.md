@@ -30,6 +30,14 @@
  *   dots       ChatGPT dots                     ~/.you-md/portable/chatgpt-dots.md
  *   grok       Grok Bot                         ~/.you-md/portable/grok-bot.md
  *
+ * Claude's memory (claude.ai and Claude Desktop) has a built-in import that
+ * takes pasted text, one memory per line. `claude-memory` renders the profile
+ * in that shape so you.md can seed Claude's memory in one paste:
+ *   claude-memory  Claude memory import          ~/.you-md/portable/claude-memory.txt
+ *
+ * The reverse direction (another assistant's memory of you, into you.md) is
+ * `you-md import`.
+ *
  * Exporting `agents` also bridges the project CLAUDE.md to AGENTS.md with an
  * `@AGENTS.md` import line, since Claude Code doesn't read AGENTS.md natively.
  * See `you-md sync` for detecting and repairing drift after you.md edits.
@@ -152,6 +160,113 @@ export function renderPortable(prefs: string, agentNote?: string): string {
     PORTABLE_PREAMBLE,
     usageSection(notes)
   )
+}
+
+// ---------------------------------------------------------------------------
+// Memory-import rendering (Claude: Settings > Memory > Start import)
+// ---------------------------------------------------------------------------
+
+const HEADER_LINE = /^(#{1,6})\s+(.+?)\s*#*$/
+const BULLET_LINE = /^(?:[-*+]|\d+[.)])\s+(.*)$/
+const KEY_VALUE_LINE = /^([A-Za-z][\w\s/'()-]{0,48}?):\s*(.*)$/
+/** Sections whose entries are things to avoid, not things to do */
+const NEGATIVE_SECTION = /\b(boundar|avoid|never|don'?t|do not|dislike|pet peeve)/i
+
+/**
+ * Flatten rendered preferences into one memory entry per line: the shape
+ * Claude's memory import reads (it extracts individual memories from pasted
+ * text; its own export prompt asks for one entry per line).
+ *
+ * Each entry carries its section as context ("How I Communicate: Tone: direct")
+ * so the fact survives being read on its own. Entries under a boundaries-style
+ * section are prefixed "Do not:", because a bare "Boundaries: use excessive
+ * caveats" reads as the opposite of what the user meant.
+ *
+ * No "[date saved]" prefix: the import prompt marks it optional, and leaving
+ * it off keeps the file identical across exports so `sync` sees real drift
+ * rather than a new day.
+ *
+ * Formatted preferences list a profile's root section (usually "# Me") with
+ * its children as subsections, and then the same children again as sections.
+ * The same fact is therefore seen twice; each is emitted once, with the
+ * shortest context ("How I Work: ..." rather than "Me / How I Work: ...").
+ */
+export function renderMemoryEntries(prefs: string): string {
+  const entries: { context: string; text: string }[] = []
+  const byText = new Map<string, number>()
+  const add = (context: string, text: string) => {
+    const existing = byText.get(text)
+    if (existing === undefined) {
+      byText.set(text, entries.length)
+      entries.push({ context, text })
+    } else if (context.length < entries[existing].context.length) {
+      entries[existing].context = context
+    }
+  }
+  const negative = (context: string) => NEGATIVE_SECTION.test(context)
+
+  let section = ""
+  let subsection = ""
+  let inFence = false
+  let inComment = false
+
+  for (const raw of prefs.split("\n")) {
+    const line = raw.trim()
+
+    if (inComment) {
+      if (line.includes("-->")) inComment = false
+      continue
+    }
+    if (line.startsWith("<!--")) {
+      if (!line.includes("-->")) inComment = true
+      continue
+    }
+    if (line.startsWith("```")) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence || line.length === 0) continue
+
+    const header = line.match(HEADER_LINE)
+    if (header) {
+      const level = header[1].length
+      if (level === 1) continue // "# User Preferences (from you.md)"
+      if (level === 2) {
+        section = header[2]
+        subsection = ""
+      } else {
+        subsection = header[2]
+      }
+      continue
+    }
+
+    const context = subsection ? `${section} / ${subsection}` : section
+
+    // "Author: Name" precedes the first section in formatted output
+    if (!section) {
+      const kv = line.match(KEY_VALUE_LINE)
+      if (kv && kv[1].toLowerCase() === "author" && kv[2]) add("Name", kv[2].trim())
+      continue
+    }
+
+    const bullet = line.match(BULLET_LINE)
+    if (bullet) {
+      const text = bullet[1].trim()
+      if (text) add(negative(context) ? "Do not" : context, text)
+      continue
+    }
+
+    const kv = line.match(KEY_VALUE_LINE)
+    if (kv) {
+      if (!kv[2].trim()) continue // template placeholder like "Timezone:"
+      add(context, `${kv[1].trim()}: ${kv[2].trim()}`)
+      continue
+    }
+
+    add(negative(context) ? "Do not" : context, line)
+  }
+
+  return entries.length === 0 ? "" : entries.map(e => `${e.context}: ${e.text}`).join("\n") + "\n"
 }
 
 // ---------------------------------------------------------------------------
@@ -300,6 +415,17 @@ export const EXPORT_TARGETS: ExportTarget[] = [
       "Upload this to your Bots' cloud computer as /workspace/you.md, then add " +
       "\"Read /workspace/you.md before every task\" to each Bot's profile.",
   },
+  {
+    id: "claude-memory",
+    name: "Claude memory",
+    scope: "user",
+    relPath: [".you-md", "portable", "claude-memory.txt"],
+    mode: "own-file",
+    render: prefs => renderMemoryEntries(prefs),
+    handoff:
+      "In Claude (web or Desktop), open Settings > Memory, choose Start import, paste this " +
+      "file, and click Add to memory. Claude keeps work-related context best.",
+  },
 ]
 
 /**
@@ -432,7 +558,7 @@ export async function ensureClaudeBridge(paths?: ExportPaths): Promise<BridgeRes
 function helpText(): string {
   const row = (t: ExportTarget) => {
     const loc = (t.scope === "user" ? "~/" : "./") + t.relPath.join("/")
-    return `  ${t.id.padEnd(10)} ${t.name.padEnd(22)} ${loc}`
+    return `  ${t.id.padEnd(14)} ${t.name.padEnd(22)} ${loc}`
   }
   const local = EXPORT_TARGETS.filter(t => !t.handoff).map(row).join("\n")
   const cloud = EXPORT_TARGETS.filter(t => t.handoff).map(row).join("\n")

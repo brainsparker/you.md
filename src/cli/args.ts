@@ -10,6 +10,7 @@ export type Command =
   | "merge"
   | "convert"
   | "export"
+  | "import"
   | "sync"
   | "skill"
   | "check"
@@ -158,6 +159,7 @@ function isValidCommand(cmd: string): cmd is Command {
     "merge",
     "convert",
     "export",
+    "import",
     "sync",
     "skill",
     "check",
@@ -183,6 +185,7 @@ Commands:
   merge <paths...>         Merge multiple you.md files
   convert <input>          Convert from other formats (.cursorrules, etc.)
   export <target...>       Export preferences into tools' native instruction files
+  import <dump>            Bring another assistant's memory of you into your you.md
   sync                     Refresh previously exported files when your you.md changes
   help                     Show this help message
   version                  Show version number
@@ -198,7 +201,7 @@ Options:
   --force                  Force overwrite existing files
   --json                   Output as JSON
   --all                    Export to all supported targets
-  --dry-run                Preview export/sync without writing files
+  --dry-run                Preview export/import/sync without writing files
   --check                  Sync: report drift without writing, exit 1 if any
   --from-me                Auto-infer profile from local environment
 
@@ -216,6 +219,8 @@ Examples:
   you-md convert .cursorrules              Convert .cursorrules to you.md
   you-md export claude gemini              Export to Claude Code and Gemini CLI
   you-md export --all --dry-run            Preview export to every tool
+  you-md export claude-memory              Paste-ready file for Claude's memory import
+  you-md import chatgpt-memories.txt       File another assistant's memories into ~/.you.md
   you-md sync                              Refresh every exported file after editing you.md
   you-md sync --check                      CI drift gate: exit 1 if exports are stale
 

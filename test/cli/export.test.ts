@@ -12,6 +12,7 @@ import {
   EXPORT_TARGETS,
   renderPortable,
   renderPersonal,
+  renderMemoryEntries,
   targetNotes,
   type ExportTarget,
 } from "../../src/cli/commands/export";
@@ -255,6 +256,74 @@ describe("renderPortable", () => {
   });
 });
 
+describe("renderMemoryEntries", () => {
+  const prefs = [
+    "# User Preferences (from you.md)",
+    "",
+    "Author: Brian",
+    "",
+    "## How I Communicate",
+    "",
+    "<!-- How AI should talk to you -->",
+    "Verbosity: concise",
+    "Tone: direct",
+    "",
+    "## How I Work",
+    "",
+    "- Prefer TypeScript in strict mode",
+    "",
+    "### Editor",
+    "",
+    "Neovim, always.",
+    "",
+    "## Context",
+    "",
+    "Timezone:",
+    "Language: en-US",
+    "",
+    "## Boundaries",
+    "",
+    "- Use excessive caveats or hedging",
+    "",
+  ].join("\n");
+
+  it("renders one memory per line with its section as context", () => {
+    const lines = renderMemoryEntries(prefs).trimEnd().split("\n");
+    expect(lines).toEqual([
+      "Name: Brian",
+      "How I Communicate: Verbosity: concise",
+      "How I Communicate: Tone: direct",
+      "How I Work: Prefer TypeScript in strict mode",
+      "How I Work / Editor: Neovim, always.",
+      "Context: Language: en-US",
+      "Do not: Use excessive caveats or hedging",
+    ]);
+  });
+
+  it("skips the title, comments, and empty template placeholders", () => {
+    const out = renderMemoryEntries(prefs);
+    expect(out).not.toContain("User Preferences");
+    expect(out).not.toContain("<!--");
+    expect(out).not.toContain("Timezone");
+  });
+
+  it("is stable across exports so sync does not see drift", () => {
+    expect(renderMemoryEntries(prefs)).toBe(renderMemoryEntries(prefs));
+    expect(renderMemoryEntries("# User Preferences (from you.md)\n")).toBe("");
+  });
+
+  it("is what the claude-memory target writes, as a whole file with a handoff", async () => {
+    const t = target("claude-memory");
+    expect(t.mode).toBe("own-file");
+    expect(t.handoff).toMatch(/Settings > Memory/);
+    const { path } = await exportToTarget(t, prefs, { home, cwd });
+    expect(path).toBe(join(home, ".you-md", "portable", "claude-memory.txt"));
+    const content = readFileSync(path, "utf-8");
+    expect(content).toBe(renderMemoryEntries(prefs));
+    expect(content).not.toContain(BEGIN_MARKER);
+  });
+});
+
 describe("targetNotes", () => {
   it("includes the handoff for cloud agents and nothing for local tools", () => {
     expect(targetNotes(target("muse"), 10)[0]).toMatch(/^→ /);
@@ -274,6 +343,7 @@ describe("EXPORT_TARGETS", () => {
     expect(ids).toEqual([
       "agents",
       "claude",
+      "claude-memory",
       "codex",
       "cursor",
       "dots",
