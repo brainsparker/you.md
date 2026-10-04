@@ -15,7 +15,8 @@ Your preferences should not be trapped in one app's memory. `you.md` makes them 
                          ┌─ MCP ───────→ Claude · Cursor · Windsurf
 ~/.you.md or ./.you.md ──┤
                          ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · USER.md · SOUL.md
-                         └─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot
+                         ├─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot · Claude memory
+                         └─ import ←─── memory dumps from ChatGPT · Claude · Gemini · Grok
 ```
 
 ## Quick start
@@ -120,8 +121,26 @@ Muse, Instinct, ChatGPT dots, and Grok Bot run in the cloud, so there's no local
 | Instinct | `instinct` | Text it to Instinct over iMessage or WhatsApp |
 | ChatGPT dots | `dots` | Attach it with **+** in your dot's conversation |
 | Grok Bot | `grok` | Upload to `/workspace/you.md`, and have each Bot's profile read it |
+| Claude memory | `claude-memory` | Settings → Memory → Start import, paste it in |
 
 Every target gets the same profile, because it's your context and it should go wherever you do. When you edit your `you.md`, `you-md sync` refreshes the portable copies and reminds you which agents need the new version.
+
+### Move your memory in and out
+
+Assistants are starting to let memory travel: Claude imports and exports its memory as pasted text ([Claude Help Center](https://support.claude.com/en/articles/12123587-import-and-export-your-memory-from-claude)), Gemini imports from ChatGPT and Claude exports, and ChatGPT exports everything but imports nothing. Each move is a one-way, one-time copy. `you.md` is the file both ends can agree on.
+
+**Into Claude.** `you-md export claude-memory` renders your profile as one memory per line, the shape Claude's import reads, and writes it to `~/.you-md/portable/claude-memory.txt`. Paste it under Settings → Memory → Start import. Claude keeps work-related context best and may not retain personal details, so check what landed.
+
+**Out of any assistant.** Ask the assistant you are leaving to list every memory it has about you, one per line. Claude's import screen shows a prompt that works in ChatGPT, Gemini, or Grok; in Claude itself, ask it to write out its memories of you verbatim. Save the answer to a file and run:
+
+```bash
+you-md import chatgpt-memories.txt              # into ~/.you.md, created if missing
+you-md import claude-memories.txt -o ./.you.md  # into a specific profile
+pbpaste | you-md import -                       # straight from the clipboard
+you-md import memories.txt --dry-run            # preview, write nothing
+```
+
+`import` files each memory under a `you.md` section by what it says (how to talk to you, your tools, boundaries, personal context, goals), uses any headings in the dump as a hint, and puts the rest under `## Imported memories` for you to sort. Duplicates, the assistant's chatter around the list, and anything that looks like a credential are skipped. An existing profile is backed up and only gains bullets; nothing already in it is rewritten. The result is another assistant's notes about you, in its words: review it, then `you-md export --all` to carry it everywhere.
 
 Install MCP into all detected tools or choose one explicitly:
 
@@ -189,6 +208,7 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 | `you-md skill install [tool]` | Add the local MCP server to supported apps |
 | `you-md skill status` | Show detected tools and installation state |
 | `you-md export <targets...>` | Write the profile to native instruction files |
+| `you-md import <dump>` | File another assistant's memories of you into your profile |
 | `you-md sync [--check]` | Detect or repair drift in managed exports |
 | `you-md merge <files...>` | Merge profiles, with later files taking precedence |
 | `you-md convert <input>` | Convert `.cursorrules`, `AGENTS.md`, or generic rules |
