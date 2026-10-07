@@ -5,6 +5,7 @@ import { mergeCommand } from "./commands/merge";
 import { convertCommand } from "./commands/convert";
 import { exportCommand } from "./commands/export";
 import { syncCommand } from "./commands/sync";
+import { harvestCommand } from "./commands/harvest";
 import { skillCommand } from "./commands/skill";
 import { checkCommand } from "./commands/check";
 
@@ -39,6 +40,10 @@ export async function main(): Promise<void> {
 
     case "sync":
       exitCode = await syncCommand(args.args, args.flags);
+      break;
+
+    case "harvest":
+      exitCode = await harvestCommand(args.args, args.flags);
       break;
 
     case "skill":
