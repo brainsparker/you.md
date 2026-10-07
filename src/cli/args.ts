@@ -11,6 +11,7 @@ export type Command =
   | "convert"
   | "export"
   | "sync"
+  | "harvest"
   | "skill"
   | "check"
   | "help"
@@ -72,6 +73,12 @@ export interface CliFlags {
 
   /** Auto-infer profile from local environment */
   fromMe?: boolean;
+
+  /** Memory types to include (harvest) */
+  types?: string;
+
+  /** Directory to scan instead of the default memory location (harvest) */
+  memoryDir?: string;
 }
 
 /**
@@ -96,6 +103,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
     "dry-run": { type: "boolean" as const },
     check: { type: "boolean" as const },
     "from-me": { type: "boolean" as const },
+    types: { type: "string" as const },
+    "memory-dir": { type: "string" as const },
   };
 
   try {
@@ -136,6 +145,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
         dryRun: values["dry-run"],
         check: values.check,
         fromMe: values["from-me"],
+        types: values.types,
+        memoryDir: values["memory-dir"],
       },
     };
   } catch (error) {
@@ -159,6 +170,7 @@ function isValidCommand(cmd: string): cmd is Command {
     "convert",
     "export",
     "sync",
+    "harvest",
     "skill",
     "check",
     "help",
@@ -184,6 +196,7 @@ Commands:
   convert <input>          Convert from other formats (.cursorrules, etc.)
   export <target...>       Export preferences into tools' native instruction files
   sync                     Refresh previously exported files when your you.md changes
+  harvest                  Pull what Claude Code already learned about you into you.md
   help                     Show this help message
   version                  Show version number
 
@@ -201,6 +214,8 @@ Options:
   --dry-run                Preview export/sync without writing files
   --check                  Sync: report drift without writing, exit 1 if any
   --from-me                Auto-infer profile from local environment
+  --types <list>           Harvest: memory types to include (default: user,feedback; or all)
+  --memory-dir <dir>       Harvest: scan this directory instead of ~/.claude/projects
 
 Examples:
   you-md skill install                     Install into all detected AI tools
@@ -218,6 +233,8 @@ Examples:
   you-md export --all --dry-run            Preview export to every tool
   you-md sync                              Refresh every exported file after editing you.md
   you-md sync --check                      CI drift gate: exit 1 if exports are stale
+  you-md harvest --dry-run                 Preview Claude Code's memories about you
+  you-md harvest                           Add them to ~/.you.md, then export --all
 
 Documentation: https://github.com/briansparker/You
 `.trim();

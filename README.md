@@ -162,6 +162,20 @@ Use the check mode as a CI drift gate:
 
 `sync` does not create new targets. Run `you-md export <target>` once to opt a file into management.
 
+## Pull in what Claude Code already learned about you
+
+Claude Code keeps auto memory: notes it writes about you as you work, saved per repository under `~/.claude/projects/<project>/memory/`. Those notes are machine-local and project-scoped, so every repo relearns that you prefer pnpm and short answers, a new laptop starts from zero, and no other tool ever hears any of it.
+
+`you-md harvest` reads those notes and files them into your profile:
+
+```bash
+you-md harvest --dry-run    # Preview what Claude Code knows about you
+you-md harvest              # Add it to ~/.you.md (created if missing)
+you-md export --all         # Carry it to every other tool
+```
+
+By default it takes the `user` and `feedback` memories (your role, working preferences, and the corrections you have given), files each under the matching section (How I Work, How I Communicate, What I Do, Boundaries), merges the same note learned in several projects into one line, and skips anything your profile already says. Re-running adds nothing new. Existing files are backed up first; `--types all` also pulls `project` and `reference` notes, `-o` targets a different profile, and `--memory-dir` points at a custom location.
+
 ## Profiles and precedence
 
 Profile discovery uses the first match in this order:
@@ -190,6 +204,7 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 | `you-md skill status` | Show detected tools and installation state |
 | `you-md export <targets...>` | Write the profile to native instruction files |
 | `you-md sync [--check]` | Detect or repair drift in managed exports |
+| `you-md harvest [--dry-run]` | Pull Claude Code's auto memory about you into your profile |
 | `you-md merge <files...>` | Merge profiles, with later files taking precedence |
 | `you-md convert <input>` | Convert `.cursorrules`, `AGENTS.md`, or generic rules |
 
