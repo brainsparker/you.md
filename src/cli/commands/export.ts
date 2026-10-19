@@ -23,6 +23,13 @@
  *   openclaw   OpenClaw workspace user file     ~/.openclaw/workspace/USER.md
  *   hermes     Hermes Agent global identity     ~/.hermes/SOUL.md
  *
+ * Agent Skills (SKILL.md) are loaded progressively: agents read only the
+ * name and description at startup and open the full profile when a task
+ * calls for it, so the profile stops costing context on every turn:
+ *   skill         Shared skills dir (Codex, Cursor, Copilot, Gemini CLI, Goose, ...)
+ *                                                 ~/.agents/skills/you-md/SKILL.md
+ *   claude-skill  Claude Code personal skills     ~/.claude/skills/you-md/SKILL.md
+ *
  * Cloud personal agents have no local instruction file, so they get a
  * portable copy of your context to hand over (paste, upload, or text):
  *   muse       Muse (Meta)                      ~/.you-md/portable/muse.md
@@ -155,6 +162,104 @@ export function renderPortable(prefs: string, agentNote?: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Agent Skills rendering
+// ---------------------------------------------------------------------------
+
+/**
+ * Skill name. The Agent Skills spec requires it to match the folder the
+ * SKILL.md lives in, so the skill targets below all use this as their
+ * directory name.
+ */
+export const SKILL_NAME = "you-md"
+
+/** Spec limit for the frontmatter description. */
+export const SKILL_DESCRIPTION_MAX = 1024
+
+/** Headings that name the file rather than a topic; useless as keywords. */
+const TITLE_HEADINGS = /^(you\.?md|me|my you\.?md|profile)$/i
+
+/**
+ * Section and subsection headings in a rendered profile, in order and
+ * deduplicated. Used to seed the skill description with the words an agent
+ * is most likely to match on.
+ */
+export function profileHeadings(prefs: string): string[] {
+  const seen = new Set<string>()
+  const headings: string[] = []
+  for (const line of prefs.split("\n")) {
+    const match = /^##{1,2} (.+?)\s*$/.exec(line)
+    if (!match) continue
+    const heading = match[1].replace(/\s+/g, " ").trim()
+    const key = heading.toLowerCase()
+    if (!heading || TITLE_HEADINGS.test(heading) || seen.has(key)) continue
+    seen.add(key)
+    headings.push(heading)
+  }
+  return headings
+}
+
+const SKILL_DESCRIPTION_LEAD = "Personal context and working preferences of the person you are working for, kept by them in their you.md"
+const SKILL_DESCRIPTION_USE =
+  "Use when a reply, plan, or piece of writing should fit how this person communicates and works, " +
+  "when choosing tools, conventions, or sources for them, when acting on their behalf, " +
+  "or whenever knowing who the user is would change the answer."
+
+/**
+ * Build the frontmatter description: what the skill holds and when to use
+ * it, with the profile's own section titles as keywords. Headings are added
+ * while they fit under the spec limit and never truncated mid-word.
+ */
+export function skillDescription(headings: string[]): string {
+  const lead = SKILL_DESCRIPTION_LEAD
+  const base = (covers: string[]) =>
+    (covers.length > 0 ? `${lead} (covers: ${covers.join(", ")}). ` : `${lead}. `) + SKILL_DESCRIPTION_USE
+
+  const covers: string[] = []
+  for (const heading of headings) {
+    const candidate = heading.replace(/\s+/g, " ").trim()
+    if (!candidate) continue
+    if (base([...covers, candidate]).length > SKILL_DESCRIPTION_MAX) break
+    covers.push(candidate)
+  }
+  return base(covers)
+}
+
+/** Double-quoted YAML scalar. JSON string escaping is a valid YAML subset. */
+function yamlString(value: string): string {
+  return JSON.stringify(value)
+}
+
+const SKILL_APPLY_NOTE =
+  "Apply these preferences to the task at hand. They describe the person, not the project; " +
+  "project instruction files still govern the code."
+
+/**
+ * Render a SKILL.md in the Agent Skills format (agentskills.io). The
+ * frontmatter stays within the six standard fields so the same folder loads
+ * in every agent that reads the spec. The body carries the full profile with
+ * the same usage notes the local personal agents get.
+ */
+export function renderSkill(prefs: string): string {
+  const description = skillDescription(profileHeadings(prefs))
+  const frontmatter = [
+    "---",
+    `name: ${SKILL_NAME}`,
+    `description: ${yamlString(description)}`,
+    "metadata:",
+    "  managed-by: you-md",
+    "---",
+  ].join("\n")
+
+  const body = afterTitle(
+    retitle(prefs, "About the person you are working for (from you.md)"),
+    MANAGED_NOTE,
+    usageSection([SKILL_APPLY_NOTE, CONFLICT_NOTE, PRIVACY_NOTE])
+  )
+
+  return `${frontmatter}\n\n${body}`
+}
+
+// ---------------------------------------------------------------------------
 // Export targets
 // ---------------------------------------------------------------------------
 
@@ -180,7 +285,17 @@ export interface ExportTarget {
   handoff?: string
   /** Warn (never truncate) when the rendered content exceeds the tool's limit */
   maxChars?: number
+  /**
+   * "skill": an Agent Skills folder (SKILL.md). Loaded on demand rather than
+   * at session start, and grouped separately in help output.
+   */
+  kind?: "skill"
+  /** One-line note printed after a successful export */
+  note?: string
 }
+
+const SKILL_NOTE =
+  "Loads on demand: agents see only the description at startup and read the full profile when it matters."
 
 export const EXPORT_TARGETS: ExportTarget[] = [
   {
@@ -259,6 +374,26 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     mode: "managed-block",
     render: prefs => renderPersonal(prefs, "About the person you work for (from you.md)"),
     maxChars: 20_000,
+  },
+  {
+    id: "skill",
+    name: "Agent Skills (shared)",
+    scope: "user",
+    relPath: [".agents", "skills", SKILL_NAME, "SKILL.md"],
+    mode: "own-file",
+    kind: "skill",
+    render: prefs => renderSkill(prefs),
+    note: SKILL_NOTE,
+  },
+  {
+    id: "claude-skill",
+    name: "Claude Code skill",
+    scope: "user",
+    relPath: [".claude", "skills", SKILL_NAME, "SKILL.md"],
+    mode: "own-file",
+    kind: "skill",
+    render: prefs => renderSkill(prefs),
+    note: SKILL_NOTE,
   },
   {
     id: "muse",
@@ -361,6 +496,7 @@ export async function exportToTarget(
 export function targetNotes(target: ExportTarget, chars: number): string[] {
   const notes: string[] = []
   if (target.handoff) notes.push(`→ ${target.handoff}`)
+  if (target.note) notes.push(target.note)
   if (target.maxChars && chars > target.maxChars) {
     notes.push(
       `! ${chars.toLocaleString("en-US")} chars; ${target.name} truncates past ` +
@@ -432,9 +568,10 @@ export async function ensureClaudeBridge(paths?: ExportPaths): Promise<BridgeRes
 function helpText(): string {
   const row = (t: ExportTarget) => {
     const loc = (t.scope === "user" ? "~/" : "./") + t.relPath.join("/")
-    return `  ${t.id.padEnd(10)} ${t.name.padEnd(22)} ${loc}`
+    return `  ${t.id.padEnd(13)} ${t.name.padEnd(22)} ${loc}`
   }
-  const local = EXPORT_TARGETS.filter(t => !t.handoff).map(row).join("\n")
+  const local = EXPORT_TARGETS.filter(t => !t.handoff && t.kind !== "skill").map(row).join("\n")
+  const skills = EXPORT_TARGETS.filter(t => t.kind === "skill").map(row).join("\n")
   const cloud = EXPORT_TARGETS.filter(t => t.handoff).map(row).join("\n")
 
   return `you-md export: carry your personal context into every tool and agent you use
@@ -445,8 +582,12 @@ Usage:
   you-md export --all --dry-run     Preview without writing
   you-md export <target> -o <path>  Override output path (single target only)
 
-Tools and agents that read a local file:
+Tools and agents that read a local file at session start:
 ${local}
+
+Agent Skills (SKILL.md, loaded on demand; the shared folder is read by Codex,
+Cursor, Copilot, Gemini CLI, Goose, OpenCode, Kiro, Hermes Agent, and more):
+${skills}
 
 Cloud personal agents (you get a portable copy to hand over):
 ${cloud}

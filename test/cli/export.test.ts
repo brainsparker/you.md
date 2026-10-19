@@ -12,7 +12,12 @@ import {
   EXPORT_TARGETS,
   renderPortable,
   renderPersonal,
+  renderSkill,
+  skillDescription,
+  profileHeadings,
   targetNotes,
+  SKILL_NAME,
+  SKILL_DESCRIPTION_MAX,
   type ExportTarget,
 } from "../../src/cli/commands/export";
 
@@ -255,6 +260,116 @@ describe("renderPortable", () => {
   });
 });
 
+describe("Agent Skills export", () => {
+  const prefs = [
+    "# User Preferences (from you.md)",
+    "",
+    "Author: Jane",
+    "",
+    "## How I Communicate",
+    "",
+    "Short sentences.",
+    "",
+    "## How I Work",
+    "",
+    "### Testing",
+    "",
+    "Behavior, not implementation.",
+    "",
+    "## Boundaries",
+    "",
+    "No secrets in examples.",
+    "",
+  ].join("\n");
+
+  function frontmatter(out: string): Record<string, string> {
+    const match = /^---\n([\s\S]*?)\n---\n/.exec(out);
+    if (!match) throw new Error("no frontmatter");
+    const fields: Record<string, string> = {};
+    for (const line of match[1].split("\n")) {
+      const kv = /^([a-z-]+): (.*)$/.exec(line);
+      if (kv) fields[kv[1]] = kv[2];
+    }
+    return fields;
+  }
+
+  it("writes SKILL.md into a folder named after the skill, as the spec requires", async () => {
+    for (const id of ["skill", "claude-skill"]) {
+      const t = target(id);
+      expect(t.kind).toBe("skill");
+      expect(t.mode).toBe("own-file");
+      const { path } = await exportToTarget(t, prefs, { home, cwd });
+      expect(path.endsWith(join(SKILL_NAME, "SKILL.md"))).toBe(true);
+      expect(frontmatter(readFileSync(path, "utf-8")).name).toBe(SKILL_NAME);
+    }
+    expect(target("skill").relPath.slice(0, 2)).toEqual([".agents", "skills"]);
+    expect(target("claude-skill").relPath.slice(0, 2)).toEqual([".claude", "skills"]);
+  });
+
+  it("keeps the frontmatter to standard fields with a valid name and description", () => {
+    const out = renderSkill(prefs);
+    const fm = frontmatter(out);
+    expect(Object.keys(fm).sort()).toEqual(["description", "name"]);
+    expect(fm.name).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(fm.name.length).toBeLessThanOrEqual(64);
+    expect(out).toContain("metadata:\n  managed-by: you-md\n---");
+
+    const description = JSON.parse(fm.description) as string;
+    expect(description.length).toBeGreaterThan(0);
+    expect(description.length).toBeLessThanOrEqual(SKILL_DESCRIPTION_MAX);
+    expect(description).toContain("How I Communicate");
+    expect(description).toContain("Boundaries");
+    expect(description).toMatch(/Use when/);
+  });
+
+  it("uses section and subsection titles as keywords, skipping file-title headings", () => {
+    expect(profileHeadings(prefs)).toEqual(["How I Communicate", "How I Work", "Testing", "Boundaries"]);
+    const nested = "# User Preferences (from you.md)\n\n## you.md\n\n### About Me\n\nx\n\n### About Me\n\ny\n";
+    expect(profileHeadings(nested)).toEqual(["About Me"]);
+  });
+
+  it("never lets the description exceed the spec limit, however many sections", () => {
+    const many = Array.from({ length: 60 }, (_, i) => `A fairly long section heading number ${i}`);
+    const description = skillDescription(many);
+    expect(description.length).toBeLessThanOrEqual(SKILL_DESCRIPTION_MAX);
+    expect(description).toContain("number 0");
+    expect(description).toMatch(/Use when/);
+    expect(skillDescription([])).not.toContain("covers:");
+  });
+
+  it("escapes quotes in headings so the YAML stays valid", () => {
+    const quoted = "# User Preferences (from you.md)\n\n## Don't \"quote\" me\n\nx\n";
+    const fm = frontmatter(renderSkill(quoted));
+    expect(JSON.parse(fm.description)).toContain("Don't \"quote\" me");
+  });
+
+  it("puts the managed note and usage notes ahead of the full profile", () => {
+    const out = renderSkill(prefs);
+    const body = out.slice(out.indexOf("\n---\n") + 5);
+    expect(body.trimStart().startsWith("# About the person you are working for (from you.md)")).toBe(true);
+    expect(body).toContain("Managed by you-md");
+    expect(body).toContain("## How to use this");
+    expect(body).toContain("This is private.");
+    expect(body).toContain("project instruction files still govern the code");
+    expect(body).not.toContain("replaces this one");
+    expect(body.indexOf("## How to use this")).toBeLessThan(body.indexOf("## How I Communicate"));
+    expect(body).toContain("Behavior, not implementation.");
+    expect(body).toContain("Author: Jane");
+  });
+
+  it("is stable and injection-scanner friendly", () => {
+    expect(renderSkill(prefs)).toBe(renderSkill(prefs));
+    expect(renderSkill(prefs)).not.toMatch(/ignore (all |any )?(previous|prior)|system prompt/i);
+  });
+
+  it("prints the on-demand loading note and no handoff", () => {
+    const notes = targetNotes(target("skill"), 500);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatch(/on demand/);
+    expect(target("skill").handoff).toBeUndefined();
+  });
+});
+
 describe("targetNotes", () => {
   it("includes the handoff for cloud agents and nothing for local tools", () => {
     expect(targetNotes(target("muse"), 10)[0]).toMatch(/^→ /);
@@ -274,6 +389,7 @@ describe("EXPORT_TARGETS", () => {
     expect(ids).toEqual([
       "agents",
       "claude",
+      "claude-skill",
       "codex",
       "cursor",
       "dots",
@@ -283,6 +399,7 @@ describe("EXPORT_TARGETS", () => {
       "instinct",
       "muse",
       "openclaw",
+      "skill",
       "windsurf",
     ]);
   });

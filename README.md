@@ -15,6 +15,7 @@ Your preferences should not be trapped in one app's memory. `you.md` makes them 
                          ┌─ MCP ───────→ Claude · Cursor · Windsurf
 ~/.you.md or ./.you.md ──┤
                          ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · USER.md · SOUL.md
+                         ├─ skill ─────→ ~/.agents/skills/you-md/SKILL.md (Codex · Cursor · Copilot · Gemini CLI · Goose)
                          └─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot
 ```
 
@@ -109,6 +110,19 @@ There are two ways to connect a profile:
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
 | OpenClaw | — | `openclaw` → `~/.openclaw/workspace/USER.md` |
 | Hermes Agent | — | `hermes` → `~/.hermes/SOUL.md` |
+
+### Agent Skills (loaded on demand)
+
+Every native export above is read in full at session start, so a long profile costs context on every turn. [Agent Skills](https://agentskills.io) load progressively: the agent sees only the skill's name and one-paragraph description at startup and opens the full `SKILL.md` when a task calls for it. `you-md export skill` writes your profile as a skill folder in the vendor-neutral location that Codex, Cursor, GitHub Copilot, Gemini CLI, Goose, OpenCode, Kiro, Hermes Agent, and other spec-compatible agents all read:
+
+```bash
+you-md export skill           # ~/.agents/skills/you-md/SKILL.md
+you-md export claude-skill    # ~/.claude/skills/you-md/SKILL.md (Claude Code reads its own folder)
+```
+
+The frontmatter stays within the spec's standard fields, so one folder loads everywhere. The description is built from your section titles ("covers: How I Communicate, How I Work, Boundaries") so agents match it when personalization matters, and the body carries the full profile with the same usage notes personal agents get. `you-md sync` refreshes skill folders like any other export.
+
+Use a skill when you want the profile available but not always in context, and keep the native export (or MCP) when you want it read on every turn. The two are not exclusive.
 
 ### Cloud personal agents
 

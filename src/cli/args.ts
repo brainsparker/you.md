@@ -215,6 +215,7 @@ Examples:
   you-md merge ~/.you.md ./.you.md         Merge user and project profiles
   you-md convert .cursorrules              Convert .cursorrules to you.md
   you-md export claude gemini              Export to Claude Code and Gemini CLI
+  you-md export skill                      Export as an Agent Skills folder (loads on demand)
   you-md export --all --dry-run            Preview export to every tool
   you-md sync                              Refresh every exported file after editing you.md
   you-md sync --check                      CI drift gate: exit 1 if exports are stale
