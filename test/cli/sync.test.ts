@@ -169,6 +169,35 @@ describe("syncCommand end to end", () => {
     }
   });
 
+  it("refreshes an exported SKILL.md as a whole owned file", async () => {
+    writeFileSync(join(cwd, ".you.md"), PROFILE_V1);
+
+    const prevCwd = process.cwd();
+    const prevHome = process.env.HOME;
+    process.chdir(cwd);
+    process.env.HOME = home;
+    try {
+      expect(await exportCommand(["skill", "claude-skill"], { quiet: true }, paths)).toBe(0);
+      const skillPath = resolveTargetPath(target("skill"), paths);
+      expect(skillPath).toBe(join(home, ".agents", "skills", "you-md", "SKILL.md"));
+      expect(readFileSync(skillPath, "utf-8")).toContain("Version one of me.");
+      expect(await syncCommand([], { quiet: true, check: true }, paths)).toBe(0);
+
+      writeFileSync(join(cwd, ".you.md"), PROFILE_V2);
+      expect(await syncCommand([], { quiet: true, check: true }, paths)).toBe(1);
+      expect(await syncCommand([], { quiet: true }, paths)).toBe(0);
+      for (const id of ["skill", "claude-skill"]) {
+        const content = readFileSync(resolveTargetPath(target(id), paths), "utf-8");
+        expect(content.startsWith("---\nname: you-md\n")).toBe(true);
+        expect(content).toContain("Version two of me.");
+      }
+      expect(await syncCommand([], { quiet: true, check: true }, paths)).toBe(0);
+    } finally {
+      process.chdir(prevCwd);
+      process.env.HOME = prevHome;
+    }
+  });
+
   it("never creates files for targets that were not exported", async () => {
     writeFileSync(join(cwd, ".you.md"), PROFILE_V1);
 
