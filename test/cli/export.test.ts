@@ -268,22 +268,118 @@ describe("targetNotes", () => {
   });
 });
 
+describe("user-level coding tool targets", () => {
+  const prefs = "# User Preferences (from you.md)\n\n## How I Communicate\n\nShort sentences.\n";
+
+  it.each([
+    ["zed", [".config", "zed", "AGENTS.md"]],
+    ["amp", [".config", "amp", "AGENTS.md"]],
+    ["junie", [".junie", "AGENTS.md"]],
+    ["devin", [".config", "devin", "AGENTS.md"]],
+    ["factory", [".factory", "AGENTS.md"]],
+    ["agents-global", [".agents", "AGENTS.md"]],
+  ])("%s writes a managed block into the tool's home AGENTS.md", async (id, rel) => {
+    const { path, action } = await exportToTarget(target(id), prefs, { home, cwd });
+
+    expect(path).toBe(join(home, ...rel));
+    expect(action).toBe("created");
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain(END_MARKER);
+    expect(content).toContain("Short sentences.");
+  });
+
+  it("preserves the user's own global guidance around the managed block", async () => {
+    const path = join(home, ".junie", "AGENTS.md");
+    mkdirSync(join(home, ".junie"), { recursive: true });
+    writeFileSync(path, "# My global rules\n\n- Always use pnpm\n");
+
+    await exportToTarget(target("junie"), prefs, { home, cwd });
+    await exportToTarget(target("junie"), prefs + "\nMore.\n", { home, cwd });
+
+    const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("# My global rules\n\n- Always use pnpm\n")).toBe(true);
+    expect(content).toContain("More.");
+    expect(content.split(BEGIN_MARKER).length).toBe(2);
+  });
+
+  it("does not collide: each tool gets its own file under the same home", async () => {
+    const ids = ["zed", "amp", "junie", "devin", "factory", "agents-global"];
+    const paths = new Set<string>();
+    for (const id of ids) {
+      const { path } = await exportToTarget(target(id), prefs, { home, cwd });
+      paths.add(path);
+    }
+    expect(paths.size).toBe(ids.length);
+  });
+
+  it("writes Kiro steering as an owned file with inclusion frontmatter first", async () => {
+    const { path } = await exportToTarget(target("kiro"), prefs, { home, cwd });
+
+    expect(path).toBe(join(home, ".kiro", "steering", "you-md.md"));
+    const content = readFileSync(path, "utf-8");
+    // Kiro requires the frontmatter to be the very first content in the file.
+    expect(content.startsWith("---\ninclusion: always\n---\n")).toBe(true);
+    expect(content).toContain("Short sentences.");
+    expect(content).not.toContain(BEGIN_MARKER);
+  });
+
+  it("writes a Copilot CLI instruction file that applies to every path", async () => {
+    const { path } = await exportToTarget(target("copilot"), prefs, { home, cwd });
+
+    expect(path).toBe(join(home, ".copilot", "instructions", "you-md.instructions.md"));
+    const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("---\napplyTo: \"**\"\n---\n")).toBe(true);
+    expect(content).toContain("Short sentences.");
+  });
+
+  it("overwrites owned Kiro and Copilot files entirely on re-export", async () => {
+    for (const id of ["kiro", "copilot"]) {
+      await exportToTarget(target(id), "old prefs", { home, cwd });
+      const { path, action } = await exportToTarget(target(id), "new prefs", { home, cwd });
+      expect(action).toBe("updated");
+      const content = readFileSync(path, "utf-8");
+      expect(content).toContain("new prefs");
+      expect(content).not.toContain("old prefs");
+    }
+  });
+
+  it("gives coding tools the profile verbatim, with no agent usage notes", () => {
+    for (const id of ["zed", "amp", "junie", "devin", "factory", "agents-global"]) {
+      expect(target(id).render(prefs)).toBe(prefs);
+    }
+  });
+
+  it("warns when a Windsurf export exceeds its documented global rules cap", () => {
+    expect(targetNotes(target("windsurf"), 5_999)).toEqual([]);
+    expect(targetNotes(target("windsurf"), 6_001)[0]).toMatch(/^! /);
+  });
+});
+
 describe("EXPORT_TARGETS", () => {
   it("covers the expected tools", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
     expect(ids).toEqual([
       "agents",
+      "agents-global",
+      "amp",
       "claude",
       "codex",
+      "copilot",
       "cursor",
+      "devin",
       "dots",
+      "factory",
       "gemini",
       "grok",
       "hermes",
       "instinct",
+      "junie",
+      "kiro",
       "muse",
       "openclaw",
       "windsurf",
+      "zed",
     ]);
   });
 

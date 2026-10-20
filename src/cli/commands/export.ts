@@ -22,6 +22,20 @@
  *   agents     Project AGENTS.md                ./AGENTS.md
  *   openclaw   OpenClaw workspace user file     ~/.openclaw/workspace/USER.md
  *   hermes     Hermes Agent global identity     ~/.hermes/SOUL.md
+ *   zed        Zed personal instructions        ~/.config/zed/AGENTS.md
+ *   amp        Amp personal guidance            ~/.config/amp/AGENTS.md
+ *   junie      Junie global guidelines          ~/.junie/AGENTS.md
+ *   kiro       Kiro global steering             ~/.kiro/steering/you-md.md
+ *   devin      Devin CLI global rules           ~/.config/devin/AGENTS.md
+ *   factory    Factory Droid personal file      ~/.factory/AGENTS.md
+ *   copilot    Copilot CLI personal instruction ~/.copilot/instructions/you-md.instructions.md
+ *   agents-global  Cross-tool home AGENTS.md    ~/.agents/AGENTS.md (Cline, Factory Droid)
+ *
+ * Most coding tools now read a user-level AGENTS.md in their own config
+ * directory. Those targets are managed blocks, so anything you already keep
+ * in that file stays put. Kiro and Copilot CLI read a directory of files
+ * instead, so you-md owns one file there and writes the frontmatter each
+ * tool expects.
  *
  * Cloud personal agents have no local instruction file, so they get a
  * portable copy of your context to hand over (paste, upload, or text):
@@ -214,6 +228,7 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     relPath: [".codeium", "windsurf", "memories", "global_rules.md"],
     mode: "managed-block",
     render: prefs => prefs,
+    maxChars: 6_000,
   },
   {
     id: "cursor",
@@ -259,6 +274,88 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     mode: "managed-block",
     render: prefs => renderPersonal(prefs, "About the person you work for (from you.md)"),
     maxChars: 20_000,
+  },
+  {
+    id: "zed",
+    name: "Zed",
+    scope: "user",
+    relPath: [".config", "zed", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "amp",
+    name: "Amp",
+    scope: "user",
+    relPath: [".config", "amp", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "junie",
+    name: "Junie (JetBrains)",
+    scope: "user",
+    relPath: [".junie", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // Kiro loads every file in ~/.kiro/steering/. Frontmatter must be the
+    // very first content in the file, so this render starts with it.
+    id: "kiro",
+    name: "Kiro",
+    scope: "user",
+    relPath: [".kiro", "steering", "you-md.md"],
+    mode: "own-file",
+    render: prefs =>
+      ["---", "inclusion: always", "---", "", MANAGED_NOTE, "", prefs.trimEnd(), ""].join("\n"),
+  },
+  {
+    id: "devin",
+    name: "Devin CLI",
+    scope: "user",
+    relPath: [".config", "devin", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "factory",
+    name: "Factory Droid",
+    scope: "user",
+    relPath: [".factory", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // Copilot CLI loads ~/.copilot/instructions/*.instructions.md alongside
+    // the main copilot-instructions.md. A dedicated file keeps you-md out of
+    // the user's own instructions; applyTo "**" makes it apply everywhere.
+    id: "copilot",
+    name: "Copilot CLI",
+    scope: "user",
+    relPath: [".copilot", "instructions", "you-md.instructions.md"],
+    mode: "own-file",
+    render: prefs =>
+      [
+        "---",
+        'applyTo: "**"',
+        "---",
+        "",
+        MANAGED_NOTE,
+        "",
+        prefs.trimEnd(),
+        "",
+      ].join("\n"),
+  },
+  {
+    // The emerging cross-tool home location. Cline and Factory Droid read it
+    // today; one file here covers every tool that adopts the convention.
+    id: "agents-global",
+    name: "Home AGENTS.md",
+    scope: "user",
+    relPath: [".agents", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
   },
   {
     id: "muse",
@@ -432,7 +529,7 @@ export async function ensureClaudeBridge(paths?: ExportPaths): Promise<BridgeRes
 function helpText(): string {
   const row = (t: ExportTarget) => {
     const loc = (t.scope === "user" ? "~/" : "./") + t.relPath.join("/")
-    return `  ${t.id.padEnd(10)} ${t.name.padEnd(22)} ${loc}`
+    return `  ${t.id.padEnd(14)} ${t.name.padEnd(22)} ${loc}`
   }
   const local = EXPORT_TARGETS.filter(t => !t.handoff).map(row).join("\n")
   const cloud = EXPORT_TARGETS.filter(t => t.handoff).map(row).join("\n")
