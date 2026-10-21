@@ -2,7 +2,7 @@
 
 > **Stop reintroducing yourself to AI.**
 
-`you.md` is a portable, human-readable profile that tells AI assistants how you think, work, communicate, and want to be helped. Write it once, keep it under your control, and take it everywhere: coding tools like Claude, Cursor, Codex, and Gemini, and personal agents like OpenClaw, Hermes, Muse, Instinct, ChatGPT dots, and Grok Bot.
+`you.md` is a portable, human-readable profile that tells AI assistants how you think, work, communicate, and want to be helped. Write it once, keep it under your control, and take it everywhere: coding tools like Claude, Cursor, Codex, Gemini, Copilot, OpenCode, Zed, Kiro, and Cline, and personal agents like OpenClaw, Hermes, Muse, Instinct, ChatGPT dots, and Grok Bot.
 
 [![npm version](https://img.shields.io/npm/v/@brainsparker/you-md?logo=npm&color=cb3837)](https://www.npmjs.com/package/@brainsparker/you-md)
 [![CI](https://github.com/brainsparker/you.md/actions/workflows/ci.yml/badge.svg)](https://github.com/brainsparker/you.md/actions/workflows/ci.yml)
@@ -14,7 +14,7 @@ Your preferences should not be trapped in one app's memory. `you.md` makes them 
 ```text
                          ┌─ MCP ───────→ Claude · Cursor · Windsurf
 ~/.you.md or ./.you.md ──┤
-                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · USER.md · SOUL.md
+                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · copilot-instructions.md · steering · rules
                          └─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot
 ```
 
@@ -105,7 +105,12 @@ There are two ways to connect a profile:
 | Cursor | `cursor` | `cursor` → `./.cursor/rules/you-md.mdc` |
 | Windsurf | `windsurf` | `windsurf` → global rules |
 | Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
-| Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
+| Gemini CLI, Antigravity | — | `gemini` → `~/.gemini/GEMINI.md` |
+| GitHub Copilot CLI | — | `copilot` → `~/.copilot/copilot-instructions.md` |
+| OpenCode | — | `opencode` → `~/.config/opencode/AGENTS.md` |
+| Zed Agent | — | `zed` → `~/.config/zed/AGENTS.md` |
+| Kiro | — | `kiro` → `~/.kiro/steering/you-md.md` |
+| Cline | — | `cline` → `~/.cline/rules/you-md.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
 | OpenClaw | — | `openclaw` → `~/.openclaw/workspace/USER.md` |
 | Hermes Agent | — | `hermes` → `~/.hermes/SOUL.md` |
@@ -135,11 +140,13 @@ Export to native instruction files when MCP is unavailable or when you want the 
 
 ```bash
 you-md export --all
-you-md export claude codex gemini
+you-md export claude codex gemini copilot
 you-md export --all --dry-run
 ```
 
-Exports are idempotent. In shared files, `you.md` owns only the content between `<!-- you-md:begin -->` and `<!-- you-md:end -->`; everything outside those markers is preserved. Existing files are backed up before writes. The Cursor target is a dedicated file owned by `you.md`.
+Exports are idempotent. In shared files, `you.md` owns only the content between `<!-- you-md:begin -->` and `<!-- you-md:end -->`; everything outside those markers is preserved. Existing files are backed up before writes. The Cursor, Kiro, and Cline targets are dedicated files owned by `you.md`, dropped into directories those tools already scan.
+
+Every native target above is the tool's user-level file, the one that applies across all of your projects. Repository files like `.github/copilot-instructions.md` or a project `.kiro/steering/` belong to the team, so `you.md` leaves them alone; use the `agents` target when you want your context in a project you own. Google Antigravity reads `~/.gemini/GEMINI.md` as its global rules, so the `gemini` export covers it too. Zed on Windows reads `%APPDATA%\Zed\AGENTS.md`; point the export there with `you-md export zed -o <path>`.
 
 Exporting the `agents` target also adds an `@AGENTS.md` bridge to the project's `CLAUDE.md`, so Claude Code and AGENTS.md-aware tools can share one source of project instructions.
 

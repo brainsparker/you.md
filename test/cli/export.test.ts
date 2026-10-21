@@ -162,6 +162,54 @@ describe("exportToTarget", () => {
     expect(content).not.toContain("old prefs");
   });
 
+  it.each([
+    ["copilot", [".copilot", "copilot-instructions.md"]],
+    ["opencode", [".config", "opencode", "AGENTS.md"]],
+    ["zed", [".config", "zed", "AGENTS.md"]],
+  ])(
+    "merges a managed block into the user-level instruction file for %s",
+    async (id, relPath) => {
+      const path = join(home, ...(relPath as string[]));
+      mkdirSync(join(home, ...(relPath as string[]).slice(0, -1)), { recursive: true });
+      writeFileSync(path, "# My own rules\n\nKeep me.\n", "utf-8");
+
+      const result = await exportToTarget(target(id), prefs, { home, cwd });
+
+      expect(result.path).toBe(path);
+      expect(result.action).toBe("updated");
+      const content = readFileSync(path, "utf-8");
+      expect(content.startsWith("# My own rules")).toBe(true);
+      expect(content).toContain(BEGIN_MARKER);
+      expect(content).toContain("Short sentences.");
+      // Coding tools get the profile as-is, no personal-agent preamble
+      expect(content).toContain("# User Preferences (from you.md)");
+      expect(content).not.toContain("How to use this");
+    }
+  );
+
+  it("writes kiro steering as an owned file with inclusion front matter first", async () => {
+    const { path } = await exportToTarget(target("kiro"), prefs, { home, cwd });
+
+    expect(path).toBe(join(home, ".kiro", "steering", "you-md.md"));
+    const content = readFileSync(path, "utf-8");
+    // Kiro requires the front matter to be the very first content in the file
+    expect(content.startsWith("---\ninclusion: always\n---\n")).toBe(true);
+    expect(content).toContain("Managed by you-md");
+    expect(content).toContain("Short sentences.");
+    expect(content).not.toContain(BEGIN_MARKER);
+  });
+
+  it("writes a cline global rule as an owned file and overwrites it on re-export", async () => {
+    await exportToTarget(target("cline"), "old prefs", { home, cwd });
+    const { path } = await exportToTarget(target("cline"), "new prefs", { home, cwd });
+
+    expect(path).toBe(join(home, ".cline", "rules", "you-md.md"));
+    const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("<!-- Managed by you-md")).toBe(true);
+    expect(content).toContain("new prefs");
+    expect(content).not.toContain("old prefs");
+  });
+
   it("respects an output path override", async () => {
     const override = join(tempDir, "custom", "out.md");
     const { path } = await exportToTarget(target("gemini"), prefs, { home, cwd }, override);
@@ -237,7 +285,9 @@ describe("agent usage notes", () => {
   });
 
   it("doesn't add usage notes to coding tools", () => {
-    expect(target("claude").render(prefs)).not.toContain("How to use this");
+    for (const id of ["claude", "copilot", "opencode", "zed", "kiro", "cline"]) {
+      expect(target(id).render(prefs)).not.toContain("How to use this");
+    }
   });
 
   it("avoids override phrasing that injection scanners flag", () => {
@@ -274,16 +324,21 @@ describe("EXPORT_TARGETS", () => {
     expect(ids).toEqual([
       "agents",
       "claude",
+      "cline",
       "codex",
+      "copilot",
       "cursor",
       "dots",
       "gemini",
       "grok",
       "hermes",
       "instinct",
+      "kiro",
       "muse",
       "openclaw",
+      "opencode",
       "windsurf",
+      "zed",
     ]);
   });
 
