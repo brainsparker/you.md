@@ -140,7 +140,12 @@ export type ParseErrorCode =
   | "NETWORK_ERROR"
   | "TIMEOUT"
   | "PARSE_TIMEOUT"
-  | "PERMISSION_DENIED";
+  | "PERMISSION_DENIED"
+  | "EXTENDS_INVALID"
+  | "EXTENDS_NOT_FOUND"
+  | "EXTENDS_CYCLE"
+  | "EXTENDS_DEPTH_EXCEEDED"
+  | "EXTENDS_REMOTE_DISABLED";
 
 /**
  * Parse warning codes

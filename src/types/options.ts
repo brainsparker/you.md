@@ -53,6 +53,25 @@ export interface ParseOptions {
 
   /** Whether to preserve raw section content (default: true) */
   readonly preserveRawContent?: boolean;
+
+  /**
+   * Whether to resolve the `extends` frontmatter field when loading a
+   * profile from a path or URL (default: true). When resolved, the base
+   * profile chain is loaded and merged underneath the profile, with the
+   * loaded profile winning on conflicts.
+   */
+  readonly resolveExtends?: boolean;
+
+  /**
+   * Allow `extends` to point at an HTTPS URL (default: false, or true when
+   * the YOU_MD_ALLOW_REMOTE_EXTENDS environment variable is set to 1 or true).
+   * Remote bases are opt-in because a project-local profile in a cloned
+   * repository could otherwise pull instructions from anywhere.
+   */
+  readonly allowRemoteExtends?: boolean;
+
+  /** Maximum length of the `extends` chain (default: 5) */
+  readonly maxExtendsDepth?: number;
 }
 
 /**

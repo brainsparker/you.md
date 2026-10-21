@@ -19,6 +19,13 @@ export interface YouMdProfile {
 
   /** Source URL if loaded from remote */
   readonly sourceUrl?: string;
+
+  /**
+   * Sources of the base profiles merged underneath this one via the
+   * `extends` frontmatter field, root-most first. Absent when the profile
+   * does not extend anything or inheritance was not resolved.
+   */
+  readonly extendsChain?: readonly string[];
 }
 
 /**

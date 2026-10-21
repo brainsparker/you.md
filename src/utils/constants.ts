@@ -24,6 +24,16 @@ export const MAX_FETCH_TIMEOUT = 60_000;
 export const DEFAULT_ENV_VAR = "YOU_MD_PATH";
 
 /**
+ * Maximum number of base profiles an `extends` chain may traverse
+ */
+export const MAX_EXTENDS_DEPTH = 5;
+
+/**
+ * Environment variable that opts in to HTTPS `extends` targets
+ */
+export const REMOTE_EXTENDS_ENV_VAR = "YOU_MD_ALLOW_REMOTE_EXTENDS";
+
+/**
  * Default file names to search for
  */
 export const DEFAULT_FILE_NAMES = [".you.md", "you.md"];
