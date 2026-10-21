@@ -90,6 +90,21 @@ describe("stale export round trip", () => {
     expect(detectSyncStatus(readFileSync(path, "utf-8"), freshTwo, t.mode)).toBe("in-sync");
     expect(readFileSync(path, "utf-8")).not.toContain("version one");
   });
+
+  it.each(["kiro", "cline"])("tracks drift for the owned %s rule file", async id => {
+    const t = target(id);
+    await exportToTarget(t, "version one", paths);
+    const path = resolveTargetPath(t, paths);
+
+    const freshOne = t.render("version one");
+    expect(detectSyncStatus(readFileSync(path, "utf-8"), freshOne, t.mode)).toBe("in-sync");
+
+    const freshTwo = t.render("version two");
+    expect(detectSyncStatus(readFileSync(path, "utf-8"), freshTwo, t.mode)).toBe("stale");
+
+    await exportToTarget(t, "version two", paths);
+    expect(detectSyncStatus(readFileSync(path, "utf-8"), freshTwo, t.mode)).toBe("in-sync");
+  });
 });
 
 describe("ensureClaudeBridge", () => {

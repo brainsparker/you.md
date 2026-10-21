@@ -17,6 +17,12 @@
  *   claude     Claude Code global memory        ~/.claude/CLAUDE.md
  *   codex      Codex CLI global guidance        ~/.codex/AGENTS.md
  *   gemini     Gemini CLI global context        ~/.gemini/GEMINI.md
+ *              (Antigravity reads the same file as its global rules)
+ *   copilot    GitHub Copilot CLI user prefs    ~/.copilot/copilot-instructions.md
+ *   opencode   OpenCode global rules            ~/.config/opencode/AGENTS.md
+ *   zed        Zed Agent personal instructions  ~/.config/zed/AGENTS.md
+ *   kiro       Kiro global steering file        ~/.kiro/steering/you-md.md
+ *   cline      Cline global rule                ~/.cline/rules/you-md.md
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
@@ -200,12 +206,66 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     render: prefs => prefs,
   },
   {
+    // Google Antigravity (IDE and CLI) uses ~/.gemini/GEMINI.md as its global
+    // rules file too, so this one export covers both.
     id: "gemini",
     name: "Gemini CLI",
     scope: "user",
     relPath: [".gemini", "GEMINI.md"],
     mode: "managed-block",
     render: prefs => prefs,
+  },
+  {
+    // Copilot CLI user-level instructions, applied across every repository.
+    // Repo-level .github/copilot-instructions.md is team context, not yours,
+    // so you-md stays out of it.
+    id: "copilot",
+    name: "GitHub Copilot CLI",
+    scope: "user",
+    relPath: [".copilot", "copilot-instructions.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // OpenCode loads this global AGENTS.md in every session, before the
+    // project files. It is the documented home for personal rules.
+    id: "opencode",
+    name: "OpenCode",
+    scope: "user",
+    relPath: [".config", "opencode", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // Zed Agent personal instructions, applied to every project. On Windows
+    // Zed reads %APPDATA%\Zed\AGENTS.md instead; use -o there.
+    id: "zed",
+    name: "Zed Agent",
+    scope: "user",
+    relPath: [".config", "zed", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // Kiro global steering: every .md under ~/.kiro/steering/ applies to all
+    // workspaces. Front matter must be the very first bytes of the file.
+    id: "kiro",
+    name: "Kiro",
+    scope: "user",
+    relPath: [".kiro", "steering", "you-md.md"],
+    mode: "own-file",
+    render: prefs =>
+      ["---", "inclusion: always", "---", "", MANAGED_NOTE, "", prefs.trimEnd(), ""].join("\n"),
+  },
+  {
+    // Cline global rules: every .md under ~/.cline/rules/ is combined into
+    // the rule set for all projects (shared by the IDE, Desktop, and CLI).
+    id: "cline",
+    name: "Cline",
+    scope: "user",
+    relPath: [".cline", "rules", "you-md.md"],
+    mode: "own-file",
+    render: prefs => [MANAGED_NOTE, "", prefs.trimEnd(), ""].join("\n"),
   },
   {
     id: "windsurf",
