@@ -12,9 +12,9 @@
 Your preferences should not be trapped in one app's memory. `you.md` makes them a file you can read, edit, version, and take anywhere.
 
 ```text
-                         ┌─ MCP ───────→ Claude · Cursor · Windsurf
+                         ┌─ MCP ───────→ Claude · Cursor · Windsurf · Codex · Gemini
 ~/.you.md or ./.you.md ──┤
-                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · USER.md · SOUL.md
+                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · copilot-instructions.md · USER.md · SOUL.md
                          └─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot
 ```
 
@@ -104,8 +104,9 @@ There are two ways to connect a profile:
 | Claude Desktop | `claude-desktop` | — |
 | Cursor | `cursor` | `cursor` → `./.cursor/rules/you-md.mdc` |
 | Windsurf | `windsurf` | `windsurf` → global rules |
-| Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
-| Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
+| Codex CLI | `codex` | `codex` → `~/.codex/AGENTS.md` |
+| Gemini CLI | `gemini` | `gemini` → `~/.gemini/GEMINI.md` |
+| GitHub Copilot (CLI, VS Code, JetBrains) | — | `copilot` → `~/.copilot/copilot-instructions.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
 | OpenClaw | — | `openclaw` → `~/.openclaw/workspace/USER.md` |
 | Hermes Agent | — | `hermes` → `~/.hermes/SOUL.md` |
@@ -128,16 +129,22 @@ Install MCP into all detected tools or choose one explicitly:
 ```bash
 you-md skill install
 you-md skill install cursor
+you-md skill install codex      # writes a [mcp_servers.you-md] table to ~/.codex/config.toml
+you-md skill install gemini     # adds mcpServers.you-md to ~/.gemini/settings.json
 you-md skill status
 ```
+
+Codex and Gemini both relocate their config with an environment variable (`CODEX_HOME`, `GEMINI_CLI_HOME`); `skill install`, `export`, and `sync` follow it. Copilot's `COPILOT_HOME` is followed the same way.
 
 Export to native instruction files when MCP is unavailable or when you want the context loaded at session start:
 
 ```bash
 you-md export --all
-you-md export claude codex gemini
+you-md export claude codex gemini copilot
 you-md export --all --dry-run
 ```
+
+The `copilot` target is the user-level instructions file Copilot CLI loads in every repository. Copilot in VS Code, JetBrains, and the CLI also read a project `AGENTS.md`, so `you-md export agents` covers the per-project side.
 
 Exports are idempotent. In shared files, `you.md` owns only the content between `<!-- you-md:begin -->` and `<!-- you-md:end -->`; everything outside those markers is preserved. Existing files are backed up before writes. The Cursor target is a dedicated file owned by `you.md`.
 
