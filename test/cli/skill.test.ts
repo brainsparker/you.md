@@ -2,7 +2,15 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { join } from "node:path";
 import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { readJsonConfig, writeJsonConfig, skillCommand } from "../../src/cli/commands/skill";
+import {
+  readJsonConfig,
+  writeJsonConfig,
+  skillCommand,
+  hasCodexEntry,
+  upsertCodexEntry,
+  removeCodexEntry,
+  CODEX_TABLE,
+} from "../../src/cli/commands/skill";
 
 const tempDir = join(tmpdir(), `you-md-skill-test-${Date.now()}`);
 
@@ -145,5 +153,184 @@ describe("MCP entry package spec", () => {
     // must point npx at the published scoped package.
     expect(source).toContain('"-p", "@brainsparker/you-md"');
     expect(source).not.toMatch(/"-p",\s*"you-md"/);
+  });
+});
+
+describe("Codex CLI TOML entry", () => {
+  const other = [
+    "# my codex config",
+    'model = "gpt-5"',
+    "",
+    "[mcp_servers.context7]",
+    'command = "npx"',
+    'args = ["-y", "@upstash/context7-mcp"]',
+    "",
+    "[projects.\"/home/me/app\"]",
+    'trust_level = "trusted"',
+    "",
+  ].join("\n");
+
+  it("detects an absent table", () => {
+    expect(hasCodexEntry("")).toBe(false);
+    expect(hasCodexEntry(other)).toBe(false);
+  });
+
+  it("appends the table to an existing config without touching other content", () => {
+    const next = upsertCodexEntry(other);
+    expect(next.startsWith(other.trimEnd())).toBe(true);
+    expect(next).toContain("[mcp_servers.you-md]");
+    expect(next).toContain('args = ["-y", "-p", "@brainsparker/you-md", "you-md-mcp"]');
+    expect(next).toContain("startup_timeout_sec = 30");
+    expect(next.endsWith("\n")).toBe(true);
+    expect(hasCodexEntry(next)).toBe(true);
+  });
+
+  it("writes a whole file when the config is empty", () => {
+    const next = upsertCodexEntry("");
+    expect(next).toBe(CODEX_TABLE + "\n");
+  });
+
+  it("replaces an existing table in place, including sub-tables, and keeps what follows", () => {
+    const stale = [
+      "[mcp_servers.you-md]",
+      'command = "node"',
+      'args = ["/old/path/you-md-mcp.js"]',
+      "",
+      "[mcp_servers.you-md.env]",
+      'DEBUG = "1"',
+      "",
+      "[mcp_servers.after]",
+      'url = "https://example.com/mcp"',
+      "",
+    ].join("\n");
+    const next = upsertCodexEntry(other + "\n" + stale);
+    expect(next.match(/\[mcp_servers\.you-md\]/g)).toHaveLength(1);
+    expect(next).not.toContain("/old/path");
+    expect(next).not.toContain('DEBUG = "1"');
+    expect(next).toContain("[mcp_servers.context7]");
+    expect(next).toContain("[mcp_servers.after]");
+    expect(next).toContain('url = "https://example.com/mcp"');
+    expect(next).toContain("startup_timeout_sec = 30");
+  });
+
+  it("recognises quoted table keys", () => {
+    expect(hasCodexEntry('[mcp_servers."you-md"]\ncommand = "npx"\n')).toBe(true);
+  });
+
+  it("is idempotent", () => {
+    const once = upsertCodexEntry(other);
+    expect(upsertCodexEntry(once)).toBe(once);
+  });
+
+  it("removes only our table", () => {
+    const withUs = upsertCodexEntry(other);
+    const removed = removeCodexEntry(withUs);
+    expect(removed).toBe(other);
+    expect(removeCodexEntry(other)).toBe(other);
+    expect(removeCodexEntry(upsertCodexEntry(""))).toBe("");
+  });
+});
+
+describe("skill install into Codex CLI and Gemini CLI", () => {
+  const originalEnv = { ...process.env };
+  const fakeHome = join(tmpdir(), `you-md-skill-install-${Date.now()}`);
+
+  beforeEach(() => {
+    vi.resetModules();
+    mkdirSync(fakeHome, { recursive: true });
+    process.env.HOME = fakeHome;
+    delete process.env.CODEX_HOME;
+    delete process.env.GEMINI_CLI_HOME;
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    rmSync(fakeHome, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it("writes a [mcp_servers.you-md] table into ~/.codex/config.toml and removes it on uninstall", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const codexDir = join(fakeHome, ".codex");
+    mkdirSync(codexDir, { recursive: true });
+    const configPath = join(codexDir, "config.toml");
+    writeFileSync(configPath, 'model = "gpt-5"\n', "utf-8");
+
+    const { skillCommand: cmd } = await import("../../src/cli/commands/skill");
+    expect(await cmd(["install", "codex"], {})).toBe(0);
+
+    const written = readFileSync(configPath, "utf-8");
+    expect(written.startsWith('model = "gpt-5"\n')).toBe(true);
+    expect(written).toContain("[mcp_servers.you-md]");
+    expect(existsSync(configPath + ".backup")).toBe(true);
+
+    // Second install is a no-op
+    expect(await cmd(["install", "codex"], {})).toBe(0);
+    expect(readFileSync(configPath, "utf-8")).toBe(written);
+
+    expect(await cmd(["uninstall", "codex"], {})).toBe(0);
+    expect(readFileSync(configPath, "utf-8")).toBe('model = "gpt-5"\n');
+  });
+
+  it("honours CODEX_HOME", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const codexHome = join(fakeHome, "elsewhere", "codex");
+    process.env.CODEX_HOME = codexHome;
+
+    const { skillCommand: cmd } = await import("../../src/cli/commands/skill");
+    expect(await cmd(["install", "codex"], {})).toBe(0);
+
+    expect(existsSync(join(codexHome, "config.toml"))).toBe(true);
+    expect(existsSync(join(fakeHome, ".codex", "config.toml"))).toBe(false);
+  });
+
+  it("adds a mcpServers entry to ~/.gemini/settings.json and preserves other settings", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const geminiDir = join(fakeHome, ".gemini");
+    mkdirSync(geminiDir, { recursive: true });
+    const settingsPath = join(geminiDir, "settings.json");
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ theme: "Default", mcpServers: { context7: { command: "npx" } } }),
+      "utf-8"
+    );
+
+    const { skillCommand: cmd } = await import("../../src/cli/commands/skill");
+    expect(await cmd(["install", "gemini"], {})).toBe(0);
+
+    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+    expect(settings.theme).toBe("Default");
+    expect(settings.mcpServers.context7).toEqual({ command: "npx" });
+    expect(settings.mcpServers["you-md"]).toEqual({
+      command: "npx",
+      args: ["-y", "-p", "@brainsparker/you-md", "you-md-mcp"],
+    });
+  });
+
+  it("honours GEMINI_CLI_HOME", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const geminiHome = join(fakeHome, "gemini-home");
+    process.env.GEMINI_CLI_HOME = geminiHome;
+
+    const { skillCommand: cmd } = await import("../../src/cli/commands/skill");
+    expect(await cmd(["install", "gemini"], {})).toBe(0);
+
+    expect(existsSync(join(geminiHome, ".gemini", "settings.json"))).toBe(true);
+  });
+
+  it("reports Codex and Gemini in status once installed", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    mkdirSync(join(fakeHome, ".codex"), { recursive: true });
+    mkdirSync(join(fakeHome, ".gemini"), { recursive: true });
+
+    const { skillCommand: cmd } = await import("../../src/cli/commands/skill");
+    await cmd(["install", "codex"], {});
+    await cmd(["install", "gemini"], {});
+    logSpy.mockClear();
+    expect(await cmd(["status"], {})).toBe(0);
+
+    const output = logSpy.mock.calls.map(c => String(c[0] ?? "")).join("\n");
+    expect(output).toMatch(/✓\s+Codex CLI\s+skill active/);
+    expect(output).toMatch(/✓\s+Gemini CLI\s+skill active/);
   });
 });

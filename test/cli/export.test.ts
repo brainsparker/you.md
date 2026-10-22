@@ -268,6 +268,65 @@ describe("targetNotes", () => {
   });
 });
 
+describe("GitHub Copilot target", () => {
+  it("writes a managed block into the user-level copilot-instructions.md", async () => {
+    const t = target("copilot");
+    const { path, action } = await exportToTarget(t, "# User Preferences (from you.md)\n\nBe concise.", { home });
+    expect(path).toBe(join(home, ".copilot", "copilot-instructions.md"));
+    expect(action).toBe("created");
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Be concise.");
+    expect(content).toContain(END_MARKER);
+  });
+
+  it("keeps hand-written Copilot instructions outside the managed block", async () => {
+    const t = target("copilot");
+    const path = join(home, ".copilot", "copilot-instructions.md");
+    mkdirSync(join(home, ".copilot"), { recursive: true });
+    writeFileSync(path, "Always run the linter before committing.\n", "utf-8");
+
+    await exportToTarget(t, "# User Preferences (from you.md)\n\nBe concise.", { home });
+
+    const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("Always run the linter before committing.")).toBe(true);
+    expect(content).toContain("Be concise.");
+  });
+});
+
+describe("config-dir environment overrides", () => {
+  const saved = { ...process.env };
+  afterEach(() => {
+    process.env = { ...saved };
+  });
+
+  it("follows COPILOT_HOME for the copilot target", () => {
+    process.env.COPILOT_HOME = join(tempDir, "copilot-home");
+    expect(resolveTargetPath(target("copilot"), { home })).toBe(
+      join(tempDir, "copilot-home", "copilot-instructions.md")
+    );
+  });
+
+  it("follows CODEX_HOME for the codex target", () => {
+    process.env.CODEX_HOME = join(tempDir, "codex-home");
+    expect(resolveTargetPath(target("codex"), { home })).toBe(join(tempDir, "codex-home", "AGENTS.md"));
+  });
+
+  it("follows GEMINI_CLI_HOME for the gemini target, keeping the .gemini segment", () => {
+    process.env.GEMINI_CLI_HOME = join(tempDir, "gemini-home");
+    expect(resolveTargetPath(target("gemini"), { home })).toBe(
+      join(tempDir, "gemini-home", ".gemini", "GEMINI.md")
+    );
+  });
+
+  it("ignores empty overrides", () => {
+    process.env.COPILOT_HOME = "   ";
+    expect(resolveTargetPath(target("copilot"), { home })).toBe(
+      join(home, ".copilot", "copilot-instructions.md")
+    );
+  });
+});
+
 describe("EXPORT_TARGETS", () => {
   it("covers the expected tools", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
@@ -275,6 +334,7 @@ describe("EXPORT_TARGETS", () => {
       "agents",
       "claude",
       "codex",
+      "copilot",
       "cursor",
       "dots",
       "gemini",

@@ -12,6 +12,12 @@
  *   claude-desktop  Claude Desktop (macOS ~/Library/Application Support/Claude/...)
  *   cursor          Cursor (~/.cursor/mcp.json)
  *   windsurf        Windsurf (~/.codeium/windsurf/mcp_config.json)
+ *   codex           Codex CLI (~/.codex/config.toml, or $CODEX_HOME/config.toml)
+ *   gemini          Gemini CLI (~/.gemini/settings.json, or $GEMINI_CLI_HOME/.gemini/settings.json)
+ *
+ * Codex keeps its config in TOML, not JSON. The server lands as a
+ * `[mcp_servers.you-md]` table and the rest of the file is left byte for byte
+ * as it was, so hand-written comments and other servers survive.
  */
 
 import { readFile, writeFile, mkdir, rename, copyFile } from "node:fs/promises"
@@ -28,7 +34,9 @@ interface ToolDef {
   id: string
   name: string
   configPath: string
-  /** The JSON key path where mcpServers lives, e.g. ["mcpServers"] */
+  /** Config file format. JSON tools nest the entry under mcpKey; TOML tools get a table. */
+  format: "json" | "toml"
+  /** The JSON key path where mcpServers lives, e.g. ["mcpServers"] (JSON tools only) */
   mcpKey: string[]
   /** True if the config file must exist for the tool to be "detected" */
   requiresExisting: boolean
@@ -39,11 +47,23 @@ interface ToolDef {
 const HOME = homedir()
 const IS_MAC = platform() === "darwin"
 
+/** Non-empty environment override, or undefined. */
+function envDir(name: string): string | undefined {
+  const value = process.env[name]
+  return value && value.trim().length > 0 ? resolve(value) : undefined
+}
+
+// Codex honors CODEX_HOME as a replacement for ~/.codex. Gemini CLI honors
+// GEMINI_CLI_HOME as a replacement for the home dir (it still appends .gemini).
+const CODEX_DIR = envDir("CODEX_HOME") ?? resolve(HOME, ".codex")
+const GEMINI_DIR = resolve(envDir("GEMINI_CLI_HOME") ?? HOME, ".gemini")
+
 const TOOLS: ToolDef[] = [
   {
     id: "claude-code",
     name: "Claude Code",
     configPath: resolve(HOME, ".claude", "claude_desktop_config.json"),
+    format: "json",
     mcpKey: ["mcpServers"],
     requiresExisting: false,
     installHints: [
@@ -57,6 +77,7 @@ const TOOLS: ToolDef[] = [
     configPath: IS_MAC
       ? resolve(HOME, "Library", "Application Support", "Claude", "claude_desktop_config.json")
       : resolve(HOME, ".config", "Claude", "claude_desktop_config.json"),
+    format: "json",
     mcpKey: ["mcpServers"],
     requiresExisting: false,
     installHints: IS_MAC
@@ -67,6 +88,7 @@ const TOOLS: ToolDef[] = [
     id: "cursor",
     name: "Cursor",
     configPath: resolve(HOME, ".cursor", "mcp.json"),
+    format: "json",
     mcpKey: ["mcpServers"],
     requiresExisting: false,
     installHints: IS_MAC
@@ -77,11 +99,30 @@ const TOOLS: ToolDef[] = [
     id: "windsurf",
     name: "Windsurf",
     configPath: resolve(HOME, ".codeium", "windsurf", "mcp_config.json"),
+    format: "json",
     mcpKey: ["mcpServers"],
     requiresExisting: false,
     installHints: IS_MAC
       ? ["/Applications/Windsurf.app", resolve(HOME, ".codeium")]
       : [resolve(HOME, ".codeium"), "/usr/local/bin/windsurf"],
+  },
+  {
+    id: "codex",
+    name: "Codex CLI",
+    configPath: resolve(CODEX_DIR, "config.toml"),
+    format: "toml",
+    mcpKey: [],
+    requiresExisting: false,
+    installHints: [CODEX_DIR, "/usr/local/bin/codex", "/opt/homebrew/bin/codex"],
+  },
+  {
+    id: "gemini",
+    name: "Gemini CLI",
+    configPath: resolve(GEMINI_DIR, "settings.json"),
+    format: "json",
+    mcpKey: ["mcpServers"],
+    requiresExisting: false,
+    installHints: [GEMINI_DIR, "/usr/local/bin/gemini", "/opt/homebrew/bin/gemini"],
   },
 ]
 
@@ -91,6 +132,105 @@ const TOOLS: ToolDef[] = [
 const MCP_ENTRY = {
   command: "npx",
   args: ["-y", "-p", "@brainsparker/you-md", "you-md-mcp"],
+}
+
+// ---------------------------------------------------------------------------
+// TOML helpers (Codex CLI)
+// ---------------------------------------------------------------------------
+
+/**
+ * The Codex table we own. Codex waits startup_timeout_sec (default 10) for a
+ * stdio server to come up; npx fetching the package on first run can take
+ * longer than that, so the entry asks for 30 seconds.
+ */
+export const CODEX_TABLE = [
+  "[mcp_servers.you-md]",
+  `command = ${JSON.stringify(MCP_ENTRY.command)}`,
+  `args = [${MCP_ENTRY.args.map(a => JSON.stringify(a)).join(", ")}]`,
+  "# npx may download the package on first launch; the Codex default of 10s is too short for that.",
+  "startup_timeout_sec = 30",
+].join("\n")
+
+/** Matches [mcp_servers.you-md] and any sub-table such as [mcp_servers.you-md.env]. */
+const OUR_TABLE_RE = /^\s*\[\s*mcp_servers\s*\.\s*("you-md"|'you-md'|you-md)\s*(\.[^\]]*)?\]\s*(#.*)?$/
+/** Matches any table or array-of-tables header. */
+const ANY_TABLE_RE = /^\s*\[/
+
+/**
+ * Locate the line range [start, end) owned by you-md in a Codex config: our
+ * table header plus everything until the next unrelated table header.
+ * Returns null when the table is absent.
+ */
+function findCodexTable(lines: string[]): { start: number; end: number } | null {
+  const start = lines.findIndex(l => OUR_TABLE_RE.test(l))
+  if (start === -1) return null
+  let end = start + 1
+  while (end < lines.length) {
+    const line = lines[end]
+    if (ANY_TABLE_RE.test(line) && !OUR_TABLE_RE.test(line)) break
+    end++
+  }
+  // Leave the blank lines that separate us from what follows (or the final
+  // newline) outside the range, so replacing the table keeps the file shape.
+  while (end > start + 1 && lines[end - 1].trim() === "") end--
+  return { start, end }
+}
+
+export function hasCodexEntry(toml: string): boolean {
+  return findCodexTable(toml.split(/\r?\n/)) !== null
+}
+
+/**
+ * Insert or replace the you-md table. Everything outside the table is kept
+ * exactly as written, including comments and other servers.
+ */
+export function upsertCodexEntry(toml: string, table: string = CODEX_TABLE): string {
+  const lines = toml.split(/\r?\n/)
+  const range = findCodexTable(lines)
+  const block = table.split("\n")
+
+  if (range) {
+    // Keep one trailing blank line between us and whatever follows.
+    const tail = lines.slice(range.end)
+    const head = lines.slice(0, range.start)
+    const sep = tail.length > 0 && tail[0].trim() !== "" ? [""] : []
+    return [...head, ...block, ...sep, ...tail].join("\n")
+  }
+
+  const trimmed = toml.replace(/\s+$/, "")
+  if (trimmed.length === 0) return block.join("\n") + "\n"
+  return trimmed + "\n\n" + block.join("\n") + "\n"
+}
+
+/** Remove the you-md table. Returns the input unchanged when it is absent. */
+export function removeCodexEntry(toml: string): string {
+  const lines = toml.split(/\r?\n/)
+  const range = findCodexTable(lines)
+  if (!range) return toml
+  const head = lines.slice(0, range.start)
+  const tail = lines.slice(range.end)
+  // Collapse the blank line that separated us from the previous table.
+  while (head.length > 0 && head[head.length - 1].trim() === "" && (tail.length === 0 || tail[0].trim() === "")) {
+    head.pop()
+  }
+  const out = [...head, ...tail].join("\n").replace(/\s+$/, "")
+  return out.length === 0 ? "" : out + "\n"
+}
+
+async function readTextConfig(path: string): Promise<string> {
+  if (!existsSync(path)) return ""
+  const raw = await readFile(path, "utf-8")
+  return raw.replace(/^\uFEFF/, "")
+}
+
+async function writeTextConfig(path: string, data: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true })
+  if (existsSync(path)) {
+    await copyFile(path, path + ".backup")
+  }
+  const tmp = path + ".tmp"
+  await writeFile(tmp, data, "utf-8")
+  await rename(tmp, path)
 }
 
 // ---------------------------------------------------------------------------
@@ -136,8 +276,20 @@ function hasYouMdInstalled(config: Record<string, unknown>, tool: ToolDef): bool
   return "you-md" in (cur as Record<string, unknown>)
 }
 
+async function isInstalled(tool: ToolDef): Promise<boolean> {
+  if (tool.format === "toml") return hasCodexEntry(await readTextConfig(tool.configPath))
+  return hasYouMdInstalled(await readJsonConfig(tool.configPath), tool)
+}
+
 async function installIntoTool(tool: ToolDef): Promise<"installed" | "already" | "error"> {
   try {
+    if (tool.format === "toml") {
+      const toml = await readTextConfig(tool.configPath)
+      if (hasCodexEntry(toml)) return "already"
+      await writeTextConfig(tool.configPath, upsertCodexEntry(toml))
+      return "installed"
+    }
+
     const config = await readJsonConfig(tool.configPath)
     if (hasYouMdInstalled(config, tool)) return "already"
 
@@ -166,6 +318,13 @@ async function installIntoTool(tool: ToolDef): Promise<"installed" | "already" |
 async function uninstallFromTool(tool: ToolDef): Promise<"removed" | "not-found" | "error"> {
   try {
     if (!existsSync(tool.configPath)) return "not-found"
+    if (tool.format === "toml") {
+      const toml = await readTextConfig(tool.configPath)
+      if (!hasCodexEntry(toml)) return "not-found"
+      await writeTextConfig(tool.configPath, removeCodexEntry(toml))
+      return "removed"
+    }
+
     const config = await readJsonConfig(tool.configPath)
     if (!hasYouMdInstalled(config, tool)) return "not-found"
 
@@ -198,7 +357,7 @@ async function installSkill(target: string | undefined, _flags: CliFlags): Promi
   if (targets.length === 0 && !target) {
     console.log("No supported AI tools detected on this machine.")
     console.log("")
-    console.log("Supported tools: claude-code, claude-desktop, cursor, windsurf")
+    console.log(`Supported tools: ${TOOLS.map(t => t.id).join(", ")}`)
     console.log("Install one, then run: you-md skill install")
     console.log("")
     console.log("Or install into a specific tool manually:")
@@ -270,8 +429,7 @@ async function statusSkill(flags: CliFlags): Promise<number> {
   } else {
     for (const tool of detected) {
       try {
-        const config = await readJsonConfig(tool.configPath)
-        const active = hasYouMdInstalled(config, tool)
+        const active = await isInstalled(tool)
         const icon = active ? "✓" : "○"
         const label = active ? "skill active" : "not installed"
         console.log(`${icon}  ${tool.name.padEnd(18)} ${label}`)
@@ -377,6 +535,8 @@ Supported tools:
   claude-desktop  Claude Desktop (macOS/Linux)
   cursor          Cursor
   windsurf        Windsurf
+  codex           Codex CLI (config.toml)
+  gemini          Gemini CLI (settings.json)
 
 Examples:
   you-md skill install              Auto-detect and install everywhere

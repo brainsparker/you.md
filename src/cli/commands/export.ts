@@ -20,8 +20,12 @@
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *   copilot    GitHub Copilot user instructions ~/.copilot/copilot-instructions.md
  *   openclaw   OpenClaw workspace user file     ~/.openclaw/workspace/USER.md
  *   hermes     Hermes Agent global identity     ~/.hermes/SOUL.md
+ *
+ * Tools that relocate their config dir through an environment variable are
+ * followed: CODEX_HOME (codex), GEMINI_CLI_HOME (gemini), COPILOT_HOME (copilot).
  *
  * Cloud personal agents have no local instruction file, so they get a
  * portable copy of your context to hand over (paste, upload, or text):
@@ -166,6 +170,13 @@ export interface ExportTarget {
   /** Path segments relative to the scope root */
   relPath: string[]
   /**
+   * Some tools move their config directory with an environment variable.
+   * When `rootEnv` is set and non-empty, the target resolves to
+   * `$rootEnv/<envRelPath>` instead of the scope root plus `relPath`.
+   */
+  rootEnv?: string
+  envRelPath?: string[]
+  /**
    * "managed-block": merge into the file via markers (file is shared with
    * the user and other tools). "own-file": you-md owns the whole file and
    * overwrites it on every export.
@@ -196,6 +207,8 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     name: "Codex CLI",
     scope: "user",
     relPath: [".codex", "AGENTS.md"],
+    rootEnv: "CODEX_HOME",
+    envRelPath: ["AGENTS.md"],
     mode: "managed-block",
     render: prefs => prefs,
   },
@@ -204,6 +217,21 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     name: "Gemini CLI",
     scope: "user",
     relPath: [".gemini", "GEMINI.md"],
+    rootEnv: "GEMINI_CLI_HOME",
+    envRelPath: [".gemini", "GEMINI.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // Copilot CLI reads this file in every repository. VS Code, JetBrains,
+    // and Copilot CLI also read a project AGENTS.md, which the `agents`
+    // target covers.
+    id: "copilot",
+    name: "GitHub Copilot",
+    scope: "user",
+    relPath: [".copilot", "copilot-instructions.md"],
+    rootEnv: "COPILOT_HOME",
+    envRelPath: ["copilot-instructions.md"],
     mode: "managed-block",
     render: prefs => prefs,
   },
@@ -311,6 +339,12 @@ export interface ExportPaths {
 }
 
 export function resolveTargetPath(target: ExportTarget, paths?: ExportPaths): string {
+  if (target.rootEnv && target.envRelPath) {
+    const root = process.env[target.rootEnv]
+    if (root && root.trim().length > 0) {
+      return resolve(root, ...target.envRelPath)
+    }
+  }
   const base = target.scope === "user" ? (paths?.home ?? homedir()) : (paths?.cwd ?? process.cwd())
   return resolve(base, ...target.relPath)
 }
