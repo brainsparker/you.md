@@ -13,6 +13,7 @@ export type Command =
   | "sync"
   | "skill"
   | "check"
+  | "distill"
   | "help"
   | "version";
 
@@ -72,6 +73,15 @@ export interface CliFlags {
 
   /** Auto-infer profile from local environment */
   fromMe?: boolean;
+
+  /** Add to an existing profile instead of creating one (distill) */
+  merge?: boolean;
+
+  /** Minimum conversations a fact must appear in (distill) */
+  min?: string;
+
+  /** Maximum number of facts to keep (distill) */
+  limit?: string;
 }
 
 /**
@@ -96,6 +106,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
     "dry-run": { type: "boolean" as const },
     check: { type: "boolean" as const },
     "from-me": { type: "boolean" as const },
+    merge: { type: "boolean" as const },
+    min: { type: "string" as const },
+    limit: { type: "string" as const },
   };
 
   try {
@@ -136,6 +149,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
         dryRun: values["dry-run"],
         check: values.check,
         fromMe: values["from-me"],
+        merge: values.merge,
+        min: values.min,
+        limit: values.limit,
       },
     };
   } catch (error) {
@@ -161,6 +177,7 @@ function isValidCommand(cmd: string): cmd is Command {
     "sync",
     "skill",
     "check",
+    "distill",
     "help",
     "version",
   ].includes(cmd);
@@ -182,6 +199,7 @@ Commands:
   validate <path>          Validate a you.md file
   merge <paths...>         Merge multiple you.md files
   convert <input>          Convert from other formats (.cursorrules, etc.)
+  distill <export>         Build a draft profile from a ChatGPT data export
   export <target...>       Export preferences into tools' native instruction files
   sync                     Refresh previously exported files when your you.md changes
   help                     Show this help message
@@ -201,6 +219,9 @@ Options:
   --dry-run                Preview export/sync without writing files
   --check                  Sync: report drift without writing, exit 1 if any
   --from-me                Auto-infer profile from local environment
+  --merge                  Distill: add new lines to an existing profile
+  --min <n>                Distill: keep facts seen in at least n chats (default 1)
+  --limit <n>              Distill: keep at most n facts (default 60)
 
 Examples:
   you-md skill install                     Install into all detected AI tools
@@ -214,6 +235,8 @@ Examples:
   you-md validate ./you.md                 Validate a file
   you-md merge ~/.you.md ./.you.md         Merge user and project profiles
   you-md convert .cursorrules              Convert .cursorrules to you.md
+  you-md distill chatgpt-export.zip --dry-run   Preview what your ChatGPT history says about you
+  you-md distill chatgpt-export.zip -o ~/.you.md  Write the draft profile
   you-md export claude gemini              Export to Claude Code and Gemini CLI
   you-md export --all --dry-run            Preview export to every tool
   you-md sync                              Refresh every exported file after editing you.md
