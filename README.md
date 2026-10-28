@@ -143,6 +143,21 @@ Exports are idempotent. In shared files, `you.md` owns only the content between 
 
 Exporting the `agents` target also adds an `@AGENTS.md` bridge to the project's `CLAUDE.md`, so Claude Code and AGENTS.md-aware tools can share one source of project instructions.
 
+## Start from your ChatGPT history
+
+If you have used ChatGPT for a while, you have already told it who you are, hundreds of times. `you-md distill` reads the data export ChatGPT gives you and turns what you said about yourself into a draft profile.
+
+```bash
+# In ChatGPT: Settings > Data controls > Export data. The zip arrives by email.
+you-md distill ~/Downloads/chatgpt-export.zip --dry-run   # Preview, ranked by how often you said it
+you-md distill ~/Downloads/chatgpt-export.zip -o ~/.you.md # Write the draft
+you-md distill ~/Downloads/chatgpt-export.zip --merge      # Later: add only what ~/.you.md is missing
+```
+
+It accepts the zip, the unpacked folder (including the sharded `conversations-000.json` layout), or `conversations.json` on its own. Only your own messages on the branch you last saw are read; assistant replies and abandoned edits are ignored, so nothing in the draft was inferred by a model. Sentences that look like a role, a stack, a working habit, a communication preference, or a standing rule ("never use emojis") are kept, filed under the matching section, and ranked by how many separate conversations repeated them. One-off requests, questions, pasted code, and anything that references a chat you cannot see are dropped. So is any sentence containing something secret-shaped: an email address, a key, a phone number, a card number, an IP. `user.json` is never read.
+
+The result is a draft. Review every line, delete what is stale, then `you-md validate` and `you-md export --all`. Use `--min 2` to keep only facts you repeated across chats, `--limit` to cap the length, and `--json` for a machine-readable report with counts and example conversation titles.
+
 ## Keep every tool in sync
 
 After editing your profile, refresh only the targets you have already exported:
@@ -192,6 +207,7 @@ you-md merge ~/.you.md ./.you.md -o merged.md
 | `you-md sync [--check]` | Detect or repair drift in managed exports |
 | `you-md merge <files...>` | Merge profiles, with later files taking precedence |
 | `you-md convert <input>` | Convert `.cursorrules`, `AGENTS.md`, or generic rules |
+| `you-md distill <export>` | Build a draft profile from a ChatGPT data export |
 
 Run `you-md --help` for every option.
 

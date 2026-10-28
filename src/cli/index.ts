@@ -7,6 +7,7 @@ import { exportCommand } from "./commands/export";
 import { syncCommand } from "./commands/sync";
 import { skillCommand } from "./commands/skill";
 import { checkCommand } from "./commands/check";
+import { distillCommand } from "./commands/distill";
 
 /**
  * Main CLI entry point
@@ -47,6 +48,10 @@ export async function main(): Promise<void> {
 
     case "check":
       exitCode = await checkCommand(args.args, args.flags);
+      break;
+
+    case "distill":
+      exitCode = await distillCommand(args.args, args.flags);
       break;
 
     case "version":
