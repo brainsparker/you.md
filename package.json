@@ -1,6 +1,6 @@
 {
   "name": "@brainsparker/you-md",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A skill that makes every AI tool and agent know you — portable personal context across Claude Code, Cursor, OpenClaw, Hermes, Muse, ChatGPT dots, and more",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -29,7 +29,8 @@
   },
   "files": [
     "dist",
-    "bin"
+    "bin",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
