@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Seven new user-level export targets for coding agents that read a personal
+  instruction file at session start: `copilot` (GitHub Copilot CLI,
+  `~/.copilot/copilot-instructions.md`), `opencode`
+  (`~/.config/opencode/AGENTS.md`), `amp` (`~/.config/amp/AGENTS.md`), `zed`
+  (`~/.config/zed/AGENTS.md`), `junie` (`~/.junie/AGENTS.md`), `cline`
+  (`~/.agents/AGENTS.md`), and `kiro` (`~/.kiro/steering/you-md.md`, an owned
+  steering file with `inclusion: always` frontmatter). `you-md sync` tracks
+  them like every other target.
+
 ## [0.3.0] - 2026-10-29
 
 ### Added
@@ -44,5 +57,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Adopted the `@brainsparker/you-md` scoped package name and stopped the CLI
   and MCP server from double-running via bin wrappers (#30).
 
+[Unreleased]: https://github.com/brainsparker/you.md/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/brainsparker/you.md/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/brainsparker/you.md/releases/tag/v0.2.1
