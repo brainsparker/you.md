@@ -162,6 +162,59 @@ describe("exportToTarget", () => {
     expect(content).not.toContain("old prefs");
   });
 
+  it("merges into an existing Copilot CLI personal instructions file", async () => {
+    const path = join(home, ".copilot", "copilot-instructions.md");
+    mkdirSync(join(home, ".copilot"), { recursive: true });
+    writeFileSync(path, "Always run the linter before committing.\n");
+
+    const result = await exportToTarget(target("copilot"), prefs, { home, cwd });
+
+    expect(result.path).toBe(path);
+    expect(result.action).toBe("updated");
+    const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("Always run the linter before committing.")).toBe(true);
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+  });
+
+  it.each(["opencode", "amp", "zed", "junie", "cline"])(
+    "keeps the user's own %s AGENTS.md content around the managed block",
+    async id => {
+      const t = target(id);
+      const path = join(home, ...t.relPath);
+      mkdirSync(join(home, ...t.relPath.slice(0, -1)), { recursive: true });
+      writeFileSync(path, "# My rules\n\nPrefer small commits.\n");
+
+      await exportToTarget(t, prefs, { home, cwd });
+      await exportToTarget(t, prefs, { home, cwd });
+
+      const content = readFileSync(path, "utf-8");
+      expect(content.startsWith("# My rules")).toBe(true);
+      expect(content).toContain("Prefer small commits.");
+      expect(content.split(BEGIN_MARKER).length).toBe(2);
+      expect(content).toContain("Short sentences.");
+    }
+  );
+
+  it("writes the Kiro steering file with inclusion frontmatter as the very first content", async () => {
+    const { path } = await exportToTarget(target("kiro"), prefs, { home, cwd });
+
+    expect(path).toBe(join(home, ".kiro", "steering", "you-md.md"));
+    const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("---\ninclusion: always\n---\n")).toBe(true);
+    expect(content).not.toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+  });
+
+  it("overwrites the owned Kiro file entirely on re-export", async () => {
+    await exportToTarget(target("kiro"), "old prefs", { home, cwd });
+    const { path } = await exportToTarget(target("kiro"), "new prefs", { home, cwd });
+
+    const content = readFileSync(path, "utf-8");
+    expect(content).toContain("new prefs");
+    expect(content).not.toContain("old prefs");
+  });
+
   it("respects an output path override", async () => {
     const override = join(tempDir, "custom", "out.md");
     const { path } = await exportToTarget(target("gemini"), prefs, { home, cwd }, override);
@@ -273,18 +326,43 @@ describe("EXPORT_TARGETS", () => {
     const ids = EXPORT_TARGETS.map(t => t.id).sort();
     expect(ids).toEqual([
       "agents",
+      "amp",
       "claude",
+      "cline",
       "codex",
+      "copilot",
       "cursor",
       "dots",
       "gemini",
       "grok",
       "hermes",
       "instinct",
+      "junie",
+      "kiro",
       "muse",
       "openclaw",
+      "opencode",
       "windsurf",
+      "zed",
     ]);
+  });
+
+  it("puts every user-level coding tool file where the vendor docs say it is read", () => {
+    const expected: Record<string, string[]> = {
+      copilot: [".copilot", "copilot-instructions.md"],
+      opencode: [".config", "opencode", "AGENTS.md"],
+      amp: [".config", "amp", "AGENTS.md"],
+      zed: [".config", "zed", "AGENTS.md"],
+      junie: [".junie", "AGENTS.md"],
+      cline: [".agents", "AGENTS.md"],
+      kiro: [".kiro", "steering", "you-md.md"],
+    };
+    for (const [id, relPath] of Object.entries(expected)) {
+      const t = target(id);
+      expect(t.scope).toBe("user");
+      expect(t.relPath).toEqual(relPath);
+      expect(t.handoff).toBeUndefined();
+    }
   });
 
   it("has unique ids and paths", () => {

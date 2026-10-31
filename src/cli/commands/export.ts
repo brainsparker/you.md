@@ -20,6 +20,13 @@
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *   copilot    GitHub Copilot CLI personal      ~/.copilot/copilot-instructions.md
+ *   opencode   OpenCode global rules            ~/.config/opencode/AGENTS.md
+ *   amp        Amp personal guidance            ~/.config/amp/AGENTS.md
+ *   zed        Zed personal instructions        ~/.config/zed/AGENTS.md
+ *   junie      Junie global guidelines          ~/.junie/AGENTS.md
+ *   cline      Cline cross-tool global rules    ~/.agents/AGENTS.md
+ *   kiro       Kiro global steering file        ~/.kiro/steering/you-md.md
  *   openclaw   OpenClaw workspace user file     ~/.openclaw/workspace/USER.md
  *   hermes     Hermes Agent global identity     ~/.hermes/SOUL.md
  *
@@ -242,6 +249,78 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     mode: "managed-block",
     render: prefs => prefs,
   },
+  // User-level instruction files. Each tool below loads its file at session
+  // start for every project, which is exactly the scope a personal you.md
+  // has. Paths come from the vendors' own docs; the README links each one.
+  {
+    id: "copilot",
+    name: "GitHub Copilot CLI",
+    scope: "user",
+    relPath: [".copilot", "copilot-instructions.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    scope: "user",
+    relPath: [".config", "opencode", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "amp",
+    name: "Amp",
+    scope: "user",
+    relPath: [".config", "amp", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "zed",
+    name: "Zed",
+    scope: "user",
+    relPath: [".config", "zed", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "junie",
+    name: "Junie (JetBrains)",
+    scope: "user",
+    relPath: [".junie", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "cline",
+    name: "Cline",
+    scope: "user",
+    relPath: [".agents", "AGENTS.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    // Kiro steering files carry YAML frontmatter that must be the very first
+    // content in the file, so you-md owns the whole file (like Cursor's .mdc)
+    // instead of merging a block into a shared one.
+    id: "kiro",
+    name: "Kiro",
+    scope: "user",
+    relPath: [".kiro", "steering", "you-md.md"],
+    mode: "own-file",
+    render: prefs =>
+      [
+        "---",
+        "inclusion: always",
+        "---",
+        "",
+        MANAGED_NOTE,
+        "",
+        prefs.trimEnd(),
+        "",
+      ].join("\n"),
+  },
   {
     id: "openclaw",
     name: "OpenClaw",
@@ -454,7 +533,10 @@ ${cloud}
 Exports are idempotent. Managed content lives between you-md markers,
 so your own notes in the same file are preserved on re-export. Your
 context is yours: every target gets the same profile, and 'you-md sync'
-keeps all of them current.`
+keeps all of them current.
+
+On Windows, Zed reads %APPDATA%\\Zed\\AGENTS.md instead of ~/.config/zed;
+point 'you-md export zed -o <path>' there.`
 }
 
 export async function exportCommand(

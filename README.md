@@ -14,7 +14,7 @@ Your preferences should not be trapped in one app's memory. `you.md` makes them 
 ```text
                          ┌─ MCP ───────→ Claude · Cursor · Windsurf
 ~/.you.md or ./.you.md ──┤
-                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · USER.md · SOUL.md
+                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · copilot-instructions.md · Kiro steering · USER.md · SOUL.md
                          └─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot
 ```
 
@@ -107,8 +107,17 @@ There are two ways to connect a profile:
 | Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
 | Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
+| [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions) | — | `copilot` → `~/.copilot/copilot-instructions.md` |
+| [OpenCode](https://opencode.ai/docs/rules/) | — | `opencode` → `~/.config/opencode/AGENTS.md` |
+| [Amp](https://ampcode.com/docs/customize/agents-md) | — | `amp` → `~/.config/amp/AGENTS.md` |
+| [Zed](https://zed.dev/docs/ai/instructions) | — | `zed` → `~/.config/zed/AGENTS.md` |
+| [Junie (JetBrains)](https://junie.jetbrains.com/docs/guidelines-and-memory.html) | — | `junie` → `~/.junie/AGENTS.md` |
+| [Cline](https://docs.cline.bot/features/cline-rules) | — | `cline` → `~/.agents/AGENTS.md` |
+| [Kiro](https://kiro.dev/docs/steering/) | — | `kiro` → `~/.kiro/steering/you-md.md` |
 | OpenClaw | — | `openclaw` → `~/.openclaw/workspace/USER.md` |
 | Hermes Agent | — | `hermes` → `~/.hermes/SOUL.md` |
+
+The user-level targets (Copilot CLI through Kiro) are the files each tool loads at session start for every project, so a personal you.md lands in the right scope without touching any repository. Kiro gets its own steering file with `inclusion: always` frontmatter; the rest receive a managed block inside a file you may already have. On Windows, Zed reads `%APPDATA%\Zed\AGENTS.md`; use `you-md export zed -o <path>`.
 
 ### Cloud personal agents
 
