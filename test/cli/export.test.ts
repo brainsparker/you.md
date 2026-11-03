@@ -98,6 +98,31 @@ describe("resolveTargetPath", () => {
     const path = resolveTargetPath(target("agents"), { home, cwd });
     expect(path).toBe(join(cwd, "AGENTS.md"));
   });
+
+  it("resolves the Copilot CLI file under ~/.copilot by default", () => {
+    const path = resolveTargetPath(target("copilot"), { home, cwd, env: {} });
+    expect(path).toBe(join(home, ".copilot", "copilot-instructions.md"));
+  });
+
+  it("honors COPILOT_HOME for the Copilot CLI file", () => {
+    const copilotHome = join(tempDir, "copilot-config");
+    const path = resolveTargetPath(target("copilot"), {
+      home,
+      cwd,
+      env: { COPILOT_HOME: copilotHome },
+    });
+    expect(path).toBe(join(copilotHome, "copilot-instructions.md"));
+  });
+
+  it("ignores an empty COPILOT_HOME", () => {
+    const path = resolveTargetPath(target("copilot"), { home, cwd, env: { COPILOT_HOME: "  " } });
+    expect(path).toBe(join(home, ".copilot", "copilot-instructions.md"));
+  });
+
+  it("resolves the Copilot repository file under .github in the cwd", () => {
+    const path = resolveTargetPath(target("copilot-repo"), { home, cwd });
+    expect(path).toBe(join(cwd, ".github", "copilot-instructions.md"));
+  });
 });
 
 describe("exportToTarget", () => {
@@ -160,6 +185,36 @@ describe("exportToTarget", () => {
     const content = readFileSync(path, "utf-8");
     expect(content).toContain("new prefs");
     expect(content).not.toContain("old prefs");
+  });
+
+  it("merges into an existing .github/copilot-instructions.md without clobbering repo rules", async () => {
+    const path = join(cwd, ".github", "copilot-instructions.md");
+    mkdirSync(join(cwd, ".github"), { recursive: true });
+    writeFileSync(path, "## Build\n\n- npm test before every commit\n", "utf-8");
+
+    const { action } = await exportToTarget(target("copilot-repo"), prefs, { home, cwd });
+    expect(action).toBe("updated");
+
+    const content = readFileSync(path, "utf-8");
+    expect(content.startsWith("## Build")).toBe(true);
+    expect(content).toContain("npm test before every commit");
+    expect(content).toContain(BEGIN_MARKER);
+    expect(content).toContain("Short sentences.");
+    expect(content).toContain(END_MARKER);
+  });
+
+  it("writes the Copilot CLI file into COPILOT_HOME when set", async () => {
+    const copilotHome = join(tempDir, "copilot-config");
+    const { path, action } = await exportToTarget(target("copilot"), prefs, {
+      home,
+      cwd,
+      env: { COPILOT_HOME: copilotHome },
+    });
+
+    expect(action).toBe("created");
+    expect(path).toBe(join(copilotHome, "copilot-instructions.md"));
+    expect(existsSync(join(home, ".copilot"))).toBe(false);
+    expect(readFileSync(path, "utf-8")).toContain("Short sentences.");
   });
 
   it("respects an output path override", async () => {
@@ -275,6 +330,8 @@ describe("EXPORT_TARGETS", () => {
       "agents",
       "claude",
       "codex",
+      "copilot",
+      "copilot-repo",
       "cursor",
       "dots",
       "gemini",

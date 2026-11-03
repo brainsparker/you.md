@@ -169,6 +169,45 @@ describe("syncCommand end to end", () => {
     }
   });
 
+  it("keeps Copilot CLI and repository instructions in sync alongside repo-authored rules", async () => {
+    writeFileSync(join(cwd, ".you.md"), PROFILE_V1);
+    mkdirSync(join(cwd, ".github"), { recursive: true });
+    writeFileSync(
+      join(cwd, ".github", "copilot-instructions.md"),
+      "## Build\n\n- Run npm test before committing\n"
+    );
+
+    const hermetic = { ...paths, env: {} };
+    const prevCwd = process.cwd();
+    const prevHome = process.env.HOME;
+    process.chdir(cwd);
+    process.env.HOME = home;
+    try {
+      const code = await exportCommand(["copilot", "copilot-repo"], { quiet: true }, hermetic);
+      expect(code).toBe(0);
+      expect(existsSync(join(home, ".copilot", "copilot-instructions.md"))).toBe(true);
+
+      const repoFile = join(cwd, ".github", "copilot-instructions.md");
+      expect(readFileSync(repoFile, "utf-8")).toContain("Run npm test before committing");
+      expect(readFileSync(repoFile, "utf-8")).toContain("Version one");
+
+      writeFileSync(join(cwd, ".you.md"), PROFILE_V2);
+      expect(await syncCommand([], { quiet: true, check: true }, hermetic)).toBe(1);
+      expect(await syncCommand([], { quiet: true }, hermetic)).toBe(0);
+
+      const repaired = readFileSync(repoFile, "utf-8");
+      expect(repaired).toContain("Run npm test before committing");
+      expect(repaired).toContain("Version two");
+      expect(readFileSync(join(home, ".copilot", "copilot-instructions.md"), "utf-8")).toContain(
+        "Version two"
+      );
+      expect(await syncCommand([], { quiet: true, check: true }, hermetic)).toBe(0);
+    } finally {
+      process.chdir(prevCwd);
+      process.env.HOME = prevHome;
+    }
+  });
+
   it("never creates files for targets that were not exported", async () => {
     writeFileSync(join(cwd, ".you.md"), PROFILE_V1);
 

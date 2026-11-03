@@ -14,7 +14,7 @@ Your preferences should not be trapped in one app's memory. `you.md` makes them 
 ```text
                          ┌─ MCP ───────→ Claude · Cursor · Windsurf
 ~/.you.md or ./.you.md ──┤
-                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · USER.md · SOUL.md
+                         ├─ export ────→ CLAUDE.md · AGENTS.md · GEMINI.md · copilot-instructions.md · USER.md · SOUL.md
                          └─ portable ──→ Muse · Instinct · ChatGPT dots · Grok Bot
 ```
 
@@ -105,6 +105,8 @@ There are two ways to connect a profile:
 | Cursor | `cursor` | `cursor` → `./.cursor/rules/you-md.mdc` |
 | Windsurf | `windsurf` | `windsurf` → global rules |
 | Codex CLI | — | `codex` → `~/.codex/AGENTS.md` |
+| GitHub Copilot CLI | no (native export only) | `copilot` → `~/.copilot/copilot-instructions.md` |
+| GitHub Copilot (all chat surfaces) | no (native export only) | `copilot-repo` → `./.github/copilot-instructions.md` |
 | Gemini CLI | — | `gemini` → `~/.gemini/GEMINI.md` |
 | AGENTS.md-compatible tools | — | `agents` → `./AGENTS.md` |
 | OpenClaw | — | `openclaw` → `~/.openclaw/workspace/USER.md` |
@@ -142,6 +144,15 @@ you-md export --all --dry-run
 Exports are idempotent. In shared files, `you.md` owns only the content between `<!-- you-md:begin -->` and `<!-- you-md:end -->`; everything outside those markers is preserved. Existing files are backed up before writes. The Cursor target is a dedicated file owned by `you.md`.
 
 Exporting the `agents` target also adds an `@AGENTS.md` bridge to the project's `CLAUDE.md`, so Claude Code and AGENTS.md-aware tools can share one source of project instructions.
+
+### GitHub Copilot
+
+Copilot reads `AGENTS.md` only in some places (Copilot CLI, the cloud agent, code review, and Copilot Chat in VS Code). Copilot Chat on GitHub.com and in Visual Studio, JetBrains, Xcode, and Eclipse reads `.github/copilot-instructions.md` instead, so the `agents` export alone does not reach them. Two targets cover both cases:
+
+- `copilot` writes your personal instructions to `~/.copilot/copilot-instructions.md`, which Copilot CLI loads in every session. If you relocated Copilot's config directory with `COPILOT_HOME`, the export follows it.
+- `copilot-repo` writes a managed block into `./.github/copilot-instructions.md`, the one file every Copilot chat surface reads. Rules your team already keeps in that file are preserved outside the markers.
+
+`copilot-repo` lands in the repository, so anyone who clones it sees the exported profile. Use a project-local `.you.md` with team-safe content for that target rather than your personal `~/.you.md`.
 
 ## Keep every tool in sync
 
