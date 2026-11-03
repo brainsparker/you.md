@@ -20,8 +20,15 @@
  *   windsurf   Windsurf global rules            ~/.codeium/windsurf/memories/global_rules.md
  *   cursor     Cursor project rule (mdc)        ./.cursor/rules/you-md.mdc
  *   agents     Project AGENTS.md                ./AGENTS.md
+ *   copilot    Copilot CLI personal instructions ~/.copilot/copilot-instructions.md
+ *   copilot-repo  Copilot repository instructions ./.github/copilot-instructions.md
  *   openclaw   OpenClaw workspace user file     ~/.openclaw/workspace/USER.md
  *   hermes     Hermes Agent global identity     ~/.hermes/SOUL.md
+ *
+ * The `copilot` target honors COPILOT_HOME, the same override Copilot CLI
+ * uses for its config directory. `copilot-repo` is the one file every Copilot
+ * chat surface reads (GitHub.com, VS Code, Visual Studio, JetBrains, Xcode,
+ * Eclipse), including the surfaces that do not read AGENTS.md.
  *
  * Cloud personal agents have no local instruction file, so they get a
  * portable copy of your context to hand over (paste, upload, or text):
@@ -166,6 +173,13 @@ export interface ExportTarget {
   /** Path segments relative to the scope root */
   relPath: string[]
   /**
+   * Some tools let the user relocate their config directory with an
+   * environment variable (Copilot CLI: COPILOT_HOME). When that variable is
+   * set and non-empty, the file is resolved as `$VAR/<relPath>` instead of
+   * the scope root.
+   */
+  envRoot?: { env: string; relPath: string[] }
+  /**
    * "managed-block": merge into the file via markers (file is shared with
    * the user and other tools). "own-file": you-md owns the whole file and
    * overwrites it on every export.
@@ -243,6 +257,23 @@ export const EXPORT_TARGETS: ExportTarget[] = [
     render: prefs => prefs,
   },
   {
+    id: "copilot",
+    name: "Copilot CLI",
+    scope: "user",
+    relPath: [".copilot", "copilot-instructions.md"],
+    envRoot: { env: "COPILOT_HOME", relPath: ["copilot-instructions.md"] },
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
+    id: "copilot-repo",
+    name: "Copilot repository",
+    scope: "project",
+    relPath: [".github", "copilot-instructions.md"],
+    mode: "managed-block",
+    render: prefs => prefs,
+  },
+  {
     id: "openclaw",
     name: "OpenClaw",
     scope: "user",
@@ -308,9 +339,18 @@ export const EXPORT_TARGETS: ExportTarget[] = [
 export interface ExportPaths {
   home?: string
   cwd?: string
+  /** Environment to consult for `envRoot` overrides. Defaults to process.env. */
+  env?: Record<string, string | undefined>
 }
 
 export function resolveTargetPath(target: ExportTarget, paths?: ExportPaths): string {
+  if (target.envRoot) {
+    const env = paths?.env ?? process.env
+    const root = env[target.envRoot.env]
+    if (root && root.trim().length > 0) {
+      return resolve(root, ...target.envRoot.relPath)
+    }
+  }
   const base = target.scope === "user" ? (paths?.home ?? homedir()) : (paths?.cwd ?? process.cwd())
   return resolve(base, ...target.relPath)
 }
@@ -432,7 +472,8 @@ export async function ensureClaudeBridge(paths?: ExportPaths): Promise<BridgeRes
 function helpText(): string {
   const row = (t: ExportTarget) => {
     const loc = (t.scope === "user" ? "~/" : "./") + t.relPath.join("/")
-    return `  ${t.id.padEnd(10)} ${t.name.padEnd(22)} ${loc}`
+    const env = t.envRoot ? `  (or $${t.envRoot.env}/${t.envRoot.relPath.join("/")})` : ""
+    return `  ${t.id.padEnd(13)} ${t.name.padEnd(22)} ${loc}${env}`
   }
   const local = EXPORT_TARGETS.filter(t => !t.handoff).map(row).join("\n")
   const cloud = EXPORT_TARGETS.filter(t => t.handoff).map(row).join("\n")
@@ -454,7 +495,12 @@ ${cloud}
 Exports are idempotent. Managed content lives between you-md markers,
 so your own notes in the same file are preserved on re-export. Your
 context is yours: every target gets the same profile, and 'you-md sync'
-keeps all of them current.`
+keeps all of them current.
+
+Project-scoped targets (cursor, agents, copilot-repo) write into the
+current directory. If that directory is a shared repository, the exported
+profile is visible to everyone who clones it, so prefer a project-local
+.you.md over your personal ~/.you.md for those.`
 }
 
 export async function exportCommand(
